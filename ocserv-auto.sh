@@ -133,6 +133,7 @@ function InstallOcserv {
         yum install -y -q epel-release && yum clean all && yum makecache fast
     fi
     # 安装ocserv
+    yum install -y net-tools
     yum install -y ocserv
 }
 

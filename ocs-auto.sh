@@ -13,7 +13,7 @@ function ConfigEnvironmentVariable {
     servercert=${1-server-cert.pem}
     serverkey=${2-server-key.pem}
     # VPN 内网 IP 段
-    vpnnetwork="192.168.8.0/21"
+    vpnnetwork="192.168.8.0/24"
     # DNS
     dns1="8.8.8.8"
     dns2="8.8.4.4"
@@ -26,7 +26,22 @@ function ConfigEnvironmentVariable {
     # 用户名，默认是user
     username=adminuser
     # 随机密码
-    password=10983814
+    randstr() {
+        index=0
+        str=""
+        for i in {a..z}; do arr[index]=$i; index=$(expr ${index} + 1); done
+        for i in {A..Z}; do arr[index]=$i; index=$(expr ${index} + 1); done
+        for i in {0..9}; do arr[index]=$i; index=$(expr ${index} + 1); done
+        for i in {1..10}; do str="$str${arr[$RANDOM%$index]}"; done
+        echo ${str}
+    }
+    password=$(randstr)
+    printf "\nPlease input \e[33m${username}\e[0m's password.\n"
+    printf "Random password is \e[33m${password}\e[0m, let it blank to use this password: "
+    read passwordtmp
+    if [[ -n "${passwordtmp}" ]]; then
+        password=${passwordtmp}
+    fi
 }
 
 function InstallOcserv {
@@ -38,8 +53,7 @@ function InstallOcserv {
         yum install -y -q epel-release && yum clean all && yum makecache fast
     fi
     # 安装ocserv
-    yum install -y net-tools
-    yum install -y ocserv
+    yum install -y net-tools ocserv
 }
 
 function ConfigOcserv {
@@ -97,6 +111,9 @@ _EOF_
     sed -i "s/#dns = 192.168.1.2/dns = ${dns1}\ndns = ${dns2}/g" "${confdir}/ocserv.conf"
     sed -i "s/cookie-timeout = 300/cookie-timeout = 86400/g" "${confdir}/ocserv.conf"
     sed -i 's/user-profile = profile.xml/#user-profile = profile.xml/g' "${confdir}/ocserv.conf"
+    cat << _EOF_ >>${confdir}/ocserv.conf
+noroute = 192.168.0.0/255.255.0.0
+_EOF_
 }
 
 function ConfigFirewall {

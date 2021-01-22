@@ -112,7 +112,7 @@ _EOF_
     sed -i "s/cookie-timeout = 300/cookie-timeout = 86400/g" "${confdir}/ocserv.conf"
     sed -i 's/user-profile = profile.xml/#user-profile = profile.xml/g' "${confdir}/ocserv.conf"
     cat << _EOF_ >>${confdir}/ocserv.conf
-noroute = 192.168.0.0/255.255.0.0
+no-route = 192.168.0.0/255.255.0.0
 _EOF_
 }
 

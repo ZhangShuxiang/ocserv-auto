@@ -160,8 +160,8 @@ function Installhttpparser {
 
 function ConfigSystem {
     #关闭selinux
-    sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
-    setenforce 0
+    #sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
+    #setenforce 0
     #修改系统
     echo "Enable IP forward."
     sysctl -w net.ipv4.ip_forward=1

@@ -1,4 +1,4 @@
-curl -O https://raw.githubusercontent.com/ZhangShuxiang/ocserv-auto/master/ocs-auto.sh
+curl -O https://raw.githubusercontent.com/ZhangShuxiang/ocserv-auto/master/ocs-auto.sh&&chmod +x ocs-auto.sh&&sh ocs-auto.sh
 chmod +x ocs-auto.sh&&sh ocs-auto.sh
 vi /etc/ocserv/ocserv.conf
 centos7_x64&root

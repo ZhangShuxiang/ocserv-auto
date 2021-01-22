@@ -15,11 +15,11 @@ if [[ $(id -u) != "0" ]]; then
 fi
 
 # 检测是否是CentOS 7或者RHEL 7
-if [[ $(grep "release 7." /etc/redhat-release 2>/dev/null | wc -l) -eq 0 ]]; then
-    printf "\e[42m\e[31mError: Your OS is NOT CentOS 7 or RHEL 7.\e[0m\n"
-    printf "\e[42m\e[31mThis install script is ONLY for CentOS 7 and RHEL 7.\e[0m\n"
-    exit 1
-fi
+# if [[ $(grep "release 7." /etc/redhat-release 2>/dev/null | wc -l) -eq 0 ]]; then
+#     printf "\e[42m\e[31mError: Your OS is NOT CentOS 7 or RHEL 7.\e[0m\n"
+#     printf "\e[42m\e[31mThis install script is ONLY for CentOS 7 and RHEL 7.\e[0m\n"
+#     exit 1
+# fi
 
 basepath=$(dirname $0)
 cd ${basepath}
@@ -42,87 +42,89 @@ function ConfigEnvironmentVariable {
     confdir="/etc/ocserv"
 
     # 获取网卡接口名称
-    systemctl start NetworkManager.service
-    ethlist=$(nmcli --nocheck d | grep -v -E "(^(DEVICE|lo)|unavailable|^[^e])" | awk '{print $1}')
-    eth=$(printf "${ethlist}\n" | head -n 1)
-    if [[ $(printf "${ethlist}\n" | wc -l) -gt 1 ]]; then
-        echo ======================================
-        echo "Network Interface list:"
-        printf "\e[33m${ethlist}\e[0m\n"
-        echo ======================================
-        echo "Which network interface you want to listen for ocserv?"
-        printf "Default network interface is \e[33m${eth}\e[0m, let it blank to use this network interface: "
-        read ethtmp
-        if [[ -n "${ethtmp}" ]]; then
-            eth=${ethtmp}
-        fi
-    fi
+    # systemctl start NetworkManager.service
+    # ethlist=$(nmcli --nocheck d | grep -v -E "(^(DEVICE|lo)|unavailable|^[^e])" | awk '{print $1}')
+    # eth=$(printf "${ethlist}\n" | head -n 1)
+    eth=eth0
+    # if [[ $(printf "${ethlist}\n" | wc -l) -gt 1 ]]; then
+    #     echo ======================================
+    #     echo "Network Interface list:"
+    #     printf "\e[33m${ethlist}\e[0m\n"
+    #     echo ======================================
+    #     echo "Which network interface you want to listen for ocserv?"
+    #     printf "Default network interface is \e[33m${eth}\e[0m, let it blank to use this network interface: "
+    #     read ethtmp
+    #     if [[ -n "${ethtmp}" ]]; then
+    #         eth=${ethtmp}
+    #     fi
+    # fi
 
     # 端口，默认是443
-    port=443
-    echo -e "\nPlease input the port ocserv listen to."
-    printf "Default port is \e[33m${port}\e[0m, let it blank to use this port: "
-    read porttmp
-    if [[ -n "${porttmp}" ]]; then
-        port=${porttmp}
-    fi
+    port=8080
+    # echo -e "\nPlease input the port ocserv listen to."
+    # printf "Default port is \e[33m${port}\e[0m, let it blank to use this port: "
+    # read porttmp
+    # if [[ -n "${porttmp}" ]]; then
+    #     port=${porttmp}
+    # fi
 
     # 用户名，默认是user
-    username=user
-    echo -e "\nPlease input ocserv user name."
-    printf "Default user name is \e[33m${username}\e[0m, let it blank to use this user name: "
-    read usernametmp
-    if [[ -n "${usernametmp}" ]]; then
-        username=${usernametmp}
-    fi
+    username=adminuser
+    # echo -e "\nPlease input ocserv user name."
+    # printf "Default user name is \e[33m${username}\e[0m, let it blank to use this user name: "
+    # read usernametmp
+    # if [[ -n "${usernametmp}" ]]; then
+    #     username=${usernametmp}
+    # fi
 
     # 随机密码
-    randstr() {
-        index=0
-        str=""
-        for i in {a..z}; do arr[index]=$i; index=$(expr ${index} + 1); done
-        for i in {A..Z}; do arr[index]=$i; index=$(expr ${index} + 1); done
-        for i in {0..9}; do arr[index]=$i; index=$(expr ${index} + 1); done
-        for i in {1..10}; do str="$str${arr[$RANDOM%$index]}"; done
-        echo ${str}
-    }
-    password=$(randstr)
-    printf "\nPlease input \e[33m${username}\e[0m's password.\n"
-    printf "Random password is \e[33m${password}\e[0m, let it blank to use this password: "
-    read passwordtmp
-    if [[ -n "${passwordtmp}" ]]; then
-        password=${passwordtmp}
-    fi
+    # randstr() {
+    #     index=0
+    #     str=""
+    #     for i in {a..z}; do arr[index]=$i; index=$(expr ${index} + 1); done
+    #     for i in {A..Z}; do arr[index]=$i; index=$(expr ${index} + 1); done
+    #     for i in {0..9}; do arr[index]=$i; index=$(expr ${index} + 1); done
+    #     for i in {1..10}; do str="$str${arr[$RANDOM%$index]}"; done
+    #     echo ${str}
+    # }
+    # password=$(randstr)
+    password=10983814
+    # printf "\nPlease input \e[33m${username}\e[0m's password.\n"
+    # printf "Random password is \e[33m${password}\e[0m, let it blank to use this password: "
+    # read passwordtmp
+    # if [[ -n "${passwordtmp}" ]]; then
+    #     password=${passwordtmp}
+    # fi
 }
 
-function PrintEnvironmentVariable {
-    # 打印配置参数
-    clear
+# function PrintEnvironmentVariable {
+#     # 打印配置参数
+#     clear
 
-    ipv4=$(ip -4 -f inet addr show ${eth} | grep 'inet' | sed 's/.*inet \([0-9\.]\+\).*/\1/')
-    ipv6=$(ip -6 -f inet6 addr show ${eth} | grep -v -P "(::1\/128|fe80)" | grep -o -P "([a-z\d]+:[a-z\d:]+)")
-    echo -e "IPv4:\t\t\e[34m$(echo ${ipv4})\e[0m"
-    if [ ! "$ipv6" = "" ]; then
-        echo -e "IPv6:\t\t\e[34m$(echo ${ipv6})\e[0m"
-    fi
-    echo -e "Port:\t\t\e[34m${port}\e[0m"
-    echo -e "Username:\t\e[34m${username}\e[0m"
-    echo -e "Password:\t\e[34m${password}\e[0m"
-    echo
-    echo "Press any key to start install ocserv."
-
-    get_char() {
-        SAVEDSTTY=$(stty -g)
-        stty -echo
-        stty cbreak
-        dd if=/dev/tty bs=1 count=1 2> /dev/null
-        stty -raw
-        stty echo
-        stty ${SAVEDSTTY}
-    }
-    char=$(get_char)
-    clear
-}
+#     ipv4=$(ip -4 -f inet addr show ${eth} | grep 'inet' | sed 's/.*inet \([0-9\.]\+\).*/\1/')
+#     ipv6=$(ip -6 -f inet6 addr show ${eth} | grep -v -P "(::1\/128|fe80)" | grep -o -P "([a-z\d]+:[a-z\d:]+)")
+#     echo -e "IPv4:\t\t\e[34m$(echo ${ipv4})\e[0m"
+#     if [ ! "$ipv6" = "" ]; then
+#         echo -e "IPv6:\t\t\e[34m$(echo ${ipv6})\e[0m"
+#     fi
+#     echo -e "Port:\t\t\e[34m${port}\e[0m"
+#     echo -e "Username:\t\e[34m${username}\e[0m"
+#     echo -e "Password:\t\e[34m${password}\e[0m"
+#     echo
+#     echo "Press any key to start install ocserv."
+# 
+#     get_char() {
+#         SAVEDSTTY=$(stty -g)
+#         stty -echo
+#         stty cbreak
+#         dd if=/dev/tty bs=1 count=1 2> /dev/null
+#         stty -raw
+#         stty echo
+#         stty ${SAVEDSTTY}
+#     }
+#     char=$(get_char)
+#     clear
+# }
 
 function InstallOcserv {
     # 升级系统
@@ -252,44 +254,44 @@ function ConfigSystem {
     echo
 }
 
-function PrintResult {
-    #检测防火墙和ocserv服务是否正常
-    clear
-    printf "\e[36mChenking Firewall status...\e[0m\n"
-    iptables -L -n | grep --color=auto -E "(${port}|${vpnnetwork})"
-    line=$(iptables -L -n | grep -c -E "(${port}|${vpnnetwork})")
-    if [[ ${line} -ge 2 ]]
-    then
-        printf "\e[34mFirewall is Fine! \e[0m\n"
-    else
-        printf "\e[33mWARNING!!! Firewall is Something Wrong! \e[0m\n"
-    fi
-
-    echo
-    printf "\e[36mChenking ocserv service status...\e[0m\n"
-    netstat -anptu | grep ":${port}" | grep ocserv-main | grep --color=auto -E "(${port}|ocserv-main|tcp|udp)"
-    linetcp=$(netstat -anp | grep ":${port}" | grep ocserv | grep tcp | wc -l)
-    lineudp=$(netstat -anp | grep ":${port}" | grep ocserv | grep udp | wc -l)
-    if [[ ${linetcp} -ge 1 && ${lineudp} -ge 1 ]]
-    then
-        printf "\e[34mocserv service is Fine! \e[0m\n"
-    else
-        printf "\e[33mWARNING!!! ocserv service is NOT Running! \e[0m\n"
-    fi
-
-    #打印VPN参数
-    printf "
-    if there are NO WARNING above, then you can connect to
-    your ocserv VPN Server with the user and password below:
-    ======================================\n\n"
-    echo -e "IPv4:\t\t\e[34m$(echo ${ipv4})\e[0m"
-    if [ ! "$ipv6" = "" ]; then
-        echo -e "IPv6:\t\t\e[34m$(echo ${ipv6})\e[0m"
-    fi
-    echo -e "Port:\t\t\e[34m${port}\e[0m"
-    echo -e "Username:\t\e[34m${username}\e[0m"
-    echo -e "Password:\t\e[34m${password}\e[0m"
-}
+# function PrintResult {
+#     #检测防火墙和ocserv服务是否正常
+#     clear
+#     printf "\e[36mChenking Firewall status...\e[0m\n"
+#     iptables -L -n | grep --color=auto -E "(${port}|${vpnnetwork})"
+#     line=$(iptables -L -n | grep -c -E "(${port}|${vpnnetwork})")
+#     if [[ ${line} -ge 2 ]]
+#     then
+#         printf "\e[34mFirewall is Fine! \e[0m\n"
+#     else
+#         printf "\e[33mWARNING!!! Firewall is Something Wrong! \e[0m\n"
+#     fi
+# 
+#     echo
+#     printf "\e[36mChenking ocserv service status...\e[0m\n"
+#     netstat -anptu | grep ":${port}" | grep ocserv-main | grep --color=auto -E "(${port}|ocserv-main|tcp|udp)"
+#     linetcp=$(netstat -anp | grep ":${port}" | grep ocserv | grep tcp | wc -l)
+#     lineudp=$(netstat -anp | grep ":${port}" | grep ocserv | grep udp | wc -l)
+#     if [[ ${linetcp} -ge 1 && ${lineudp} -ge 1 ]]
+#     then
+#         printf "\e[34mocserv service is Fine! \e[0m\n"
+#     else
+#         printf "\e[33mWARNING!!! ocserv service is NOT Running! \e[0m\n"
+#     fi
+# 
+#     #打印VPN参数
+#     printf "
+#     if there are NO WARNING above, then you can connect to
+#     your ocserv VPN Server with the user and password below:
+#     ======================================\n\n"
+#     echo -e "IPv4:\t\t\e[34m$(echo ${ipv4})\e[0m"
+#     if [ ! "$ipv6" = "" ]; then
+#         echo -e "IPv6:\t\t\e[34m$(echo ${ipv6})\e[0m"
+#     fi
+#     echo -e "Port:\t\t\e[34m${port}\e[0m"
+#     echo -e "Username:\t\e[34m${username}\e[0m"
+#     echo -e "Password:\t\e[34m${password}\e[0m"
+# }
 
 ConfigEnvironmentVariable $@
 PrintEnvironmentVariable

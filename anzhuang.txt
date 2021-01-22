@@ -1,0 +1,6 @@
+curl -O https://raw.githubusercontent.com/ZhangShuxiang/ocserv-auto/master/ocs-auto.sh
+chmod +x ocs-auto.sh&&sh ocs-auto.sh
+centos7_x64&root
+user:adminuser
+password:
+port:8080

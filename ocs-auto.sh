@@ -1,11 +1,5 @@
 #!/bin/bash
 
-# 检测是否是root用户
-if [[ $(id -u) != "0" ]]; then
-    printf "\e[42m\e[31mError: You must be root to run this install script.\e[0m\n"
-    exit 1
-fi
-
 basepath=$(dirname $0)
 cd ${basepath}
 

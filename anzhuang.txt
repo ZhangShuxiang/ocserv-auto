@@ -5,3 +5,5 @@ centos7_x64&root
 user:adminuser
 password:
 port:8080
+https://staticfiles.technoserv.com/ts-it/vpn/
+https://xiu.lanzoux.com/b073c7g4f

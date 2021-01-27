@@ -53,7 +53,7 @@ function InstallOcserv {
         dnf install -y -q epel-release && dnf clean all && dnf makecache fast
     fi
     # 安装ocserv
-    dnf install -y net-tools ocserv nginx
+    dnf install -y net-tools ocserv gnutls-utils nginx
 }
 
 function ConfigOcserv {

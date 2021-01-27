@@ -46,14 +46,14 @@ function ConfigEnvironmentVariable {
 
 function InstallOcserv {
     # 升级系统
-    #yum update -y -q
+    #dnf update -y -q
 
     # 安装 epel-release
     if [ $(grep epel /etc/yum.repos.d/*.repo | wc -l) -eq 0 ]; then
-        yum install -y -q epel-release && yum clean all && yum makecache fast
+        dnf install -y -q epel-release && dnf clean all && dnf makecache fast
     fi
     # 安装ocserv
-    yum install -y net-tools ocserv nginx
+    dnf install -y net-tools ocserv nginx
 }
 
 function ConfigOcserv {

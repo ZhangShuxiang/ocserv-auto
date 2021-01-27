@@ -143,25 +143,7 @@ function ConfigFirewall {
     fi
 }
 
-#function Installhttpparser {
-#    if [[ $(rpm -q http-parser | grep -c "http-parser-2.0") = 0 ]]; then
-#        mkdir -p /tmp/http-parser-2.0 /opt/lib
-#        cd /tmp/http-parser-2.0
-#        wget "http://mirrors.aliyun.com/epel/7/x86_64/h/http-parser-2.0-5.20121128gitcd01361.el7.x86_64.rpm"
-#        rpm2cpio http-parser-2.0-5.20121128gitcd01361.el7.x86_64.rpm | cpio -div
-#        mv usr/lib64/libhttp_parser.so.2* /opt/lib
-#        sed -i 'N;/Type=forking/a\Environment=LD_LIBRARY_PATH=/opt/lib' /lib/systemd/system/ocserv.service
-#        sed -i 'N;/Type=forking/a\ExecStartPost=/bin/sleep 0.1' /lib/systemd/system/ocserv.service
-#        systemctl daemon-reload
-#        cd ~
-#        rm -rf /tmp/http-parser-2.0
-#    fi
-#}
-
 function ConfigSystem {
-    #关闭selinux
-    #sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
-    #setenforce 0
     #修改系统
     echo "Enable IP forward."
     sysctl -w net.ipv4.ip_forward=1
@@ -178,7 +160,6 @@ ConfigEnvironmentVariable $@
 InstallOcserv
 ConfigOcserv
 ConfigFirewall
-#Install-http-parser
 ConfigSystem
 
 exit 0

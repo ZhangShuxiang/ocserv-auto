@@ -13,7 +13,7 @@ function ConfigEnvironmentVariable {
     servercert=${1-server-cert.pem}
     serverkey=${2-server-key.pem}
     # VPN 内网 IP 段
-    vpnnetwork="192.168.8.0/24"
+    vpnnetwork="172.16.8.0/24"
     # DNS
     dns1="8.8.8.8"
     dns2="8.8.4.4"

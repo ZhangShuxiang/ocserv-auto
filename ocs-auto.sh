@@ -6,9 +6,9 @@ cd ${basepath}
 function ConfigEnvironmentVariable {
     # 变量设置
     # 单IP最大连接数，默认是2
-    maxsameclients=10
+    maxsameclients=8
     # 最大连接数，默认是16
-    maxclients=1024
+    maxclients=64
     # 服务器的证书和key文件，放在本脚本的同目录下，key文件的权限应该是600或者400
     servercert=${1-server-cert.pem}
     serverkey=${2-server-key.pem}
@@ -53,7 +53,7 @@ function InstallOcserv {
         dnf install -y -q epel-release && dnf clean all && dnf makecache fast
     fi
     # 安装ocserv
-    dnf install -y net-tools ocserv gnutls-utils nginx
+    dnf install -y ocserv gnutls-utils nginx
 }
 
 function ConfigOcserv {
@@ -61,7 +61,7 @@ function ConfigOcserv {
     if [[ ! -f "${servercert}" ]] || [[ ! -f "${serverkey}" ]]; then
         # 创建 ca 证书和服务器证书（参考http://www.infradead.org/ocserv/manual.html#heading5）
         certtool --generate-privkey --outfile ca-key.pem
-
+#########################################
         cat << _EOF_ >ca.tmpl
 cn = "ocserv VPN"
 organization = "ocserv"
@@ -72,11 +72,11 @@ signing_key
 cert_signing_key
 crl_signing_key
 _EOF_
-
+#########################################
         certtool --generate-self-signed --load-privkey ca-key.pem \
         --template ca.tmpl --outfile ca-cert.pem
         certtool --generate-privkey --outfile ${serverkey}
-
+#########################################
         cat << _EOF_ >server.tmpl
 cn = "ocserv VPN"
 organization = "ocserv"
@@ -86,7 +86,7 @@ signing_key
 encryption_key #only if the generated key is an RSA one
 tls_www_server
 _EOF_
-
+#########################################
         certtool --generate-certificate --load-privkey ${serverkey} \
         --load-ca-certificate ca-cert.pem --load-ca-privkey ca-key.pem \
         --template server.tmpl --outfile ${servercert}
@@ -109,38 +109,19 @@ _EOF_
     sed -i "s/default-domain = example.com/#default-domain = example.com/g" "${confdir}/ocserv.conf"
     sed -i "s@#ipv4-network = 192.168.1.0/24@ipv4-network = ${vpnnetwork}@g" "${confdir}/ocserv.conf"
     sed -i "s/#dns = 192.168.1.2/dns = ${dns1}\ndns = ${dns2}/g" "${confdir}/ocserv.conf"
-    sed -i "s/cookie-timeout = 300/cookie-timeout = 86400/g" "${confdir}/ocserv.conf"
+    sed -i "s@no-route = 192.168.5.0/255.255.255.0@no-route = 192.168.0.0/255.255.0.0@g" "${confdir}/ocserv.conf"
+    # sed -i "s/cookie-timeout = 300/cookie-timeout = 86400/g" "${confdir}/ocserv.conf"
     sed -i 's/user-profile = profile.xml/#user-profile = profile.xml/g' "${confdir}/ocserv.conf"
-    cat << _EOF_ >>${confdir}/ocserv.conf
-no-route = 192.168.0.0/255.255.0.0
-_EOF_
 }
 
 function ConfigFirewall {
-
-    firewalldisactive=$(systemctl is-active firewalld.service)
-    iptablesisactive=$(systemctl is-active iptables.service)
-
-    # 添加防火墙允许列表
-    if [[ ${firewalldisactive} = 'active' ]]; then
-        echo "Adding firewall ports."
-        firewall-cmd --permanent --add-port=${port}/tcp
-        firewall-cmd --permanent --add-port=${port}/udp
-        echo "Allow firewall to forward."
-        firewall-cmd --permanent --add-masquerade
-        echo "Reload firewall configure."
-        firewall-cmd --reload
-    elif [[ ${iptablesisactive} = 'active' ]]; then
-        iptables -I INPUT -p tcp --dport ${port} -j ACCEPT
-        iptables -I INPUT -p udp --dport ${port} -j ACCEPT
-        iptables -I FORWARD -s ${vpnnetwork} -j ACCEPT
-        iptables -I FORWARD -d ${vpnnetwork} -j ACCEPT
-        iptables -t nat -A POSTROUTING -s ${vpnnetwork} -o ${eth} -j MASQUERADE
-        #iptables -t nat -A POSTROUTING -j MASQUERADE
-        service iptables save
-    else
-        printf "\e[33mWARNING!!! Either firewalld or iptables is NOT Running! \e[0m\n"
-    fi
+    echo "Adding firewall ports."
+    firewall-cmd --permanent --add-port=${port}/tcp
+    firewall-cmd --permanent --add-port=${port}/udp
+    echo "Allow firewall to forward."
+    firewall-cmd --permanent --add-masquerade
+    echo "Reload firewall configure."
+    firewall-cmd --reload
 }
 
 function ConfigSystem {

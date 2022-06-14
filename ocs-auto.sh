@@ -108,10 +108,12 @@ _EOF_
 }
 
 function ConfigFirewall {
-    systemctl start firewalld.service
     echo "Adding firewall ports."
+    systemctl start firewalld.service
+    firewall-cmd --permanent --add-port=26685/tcp
     firewall-cmd --permanent --add-port=${port}/tcp
     firewall-cmd --permanent --add-port=${port}/udp
+    firewall-cmd --permanent --add-port=80/tcp
     echo "Allow firewall to forward."
     firewall-cmd --permanent --add-masquerade
     echo "Reload firewall configure."
@@ -120,10 +122,10 @@ function ConfigFirewall {
 
 function ConfigSystem {
     #修改系统
-    echo "Enable IP forward."
-    sysctl -w net.ipv4.ip_forward=1
-    echo net.ipv4.ip_forward = 1 >> "/etc/sysctl.conf"
-    systemctl daemon-reload
+    # echo "Enable IP forward."
+    # sysctl -w net.ipv4.ip_forward=1
+    # echo net.ipv4.ip_forward = 1 >> "/etc/sysctl.conf"
+    # systemctl daemon-reload
     echo "Enable firewalld service to start during bootup."
     systemctl enable firewalld.service
     echo "Enable ocserv service to start during bootup."

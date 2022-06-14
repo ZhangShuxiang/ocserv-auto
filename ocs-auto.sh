@@ -5,10 +5,6 @@ cd ${basepath}
 
 function ConfigEnvironmentVariable {
     # 变量设置
-    # 单IP最大连接数，默认是2
-    maxsameclients=8
-    # 最大连接数，默认是16
-    maxclients=64
     # 服务器的证书和key文件，放在本脚本的同目录下，key文件的权限应该是600或者400
     servercert=${1-server-cert.pem}
     serverkey=${2-server-key.pem}
@@ -93,8 +89,8 @@ _EOF_
     (echo "${password}"; sleep 1; echo "${password}") | ocpasswd -c "${confdir}/ocpasswd" ${username}
 
     sed -i 's@auth = "pam"@#auth = "pam"\nauth = "plain[passwd=/etc/ocserv/ocpasswd]"@g' "${confdir}/ocserv.conf"
-    sed -i "s/max-same-clients = 2/max-same-clients = ${maxsameclients}/g" "${confdir}/ocserv.conf"
-    sed -i "s/max-clients = 16/max-clients = ${maxclients}/g" "${confdir}/ocserv.conf"
+    sed -i "s/max-same-clients = 2/max-same-clients = 8/g" "${confdir}/ocserv.conf"
+    sed -i "s/max-clients = 16/max-clients = 64/g" "${confdir}/ocserv.conf"
     sed -i "s/tcp-port = 443/tcp-port = ${port}/g" "${confdir}/ocserv.conf"
     sed -i "s/udp-port = 443/udp-port = ${port}/g" "${confdir}/ocserv.conf"
     sed -i 's/^ca-cert = /#ca-cert = /g' "${confdir}/ocserv.conf"

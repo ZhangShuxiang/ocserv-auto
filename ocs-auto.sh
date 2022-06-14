@@ -103,8 +103,9 @@ _EOF_
 
     # 编辑配置文件
     (echo "${password}"; sleep 1; echo "${password}") | ocpasswd -c "${confdir}/ocpasswd" ${username}
-    sed -i 's@auth = "pam"@#auth = "pam"@g' "${confdir}/ocserv.conf"
-    sed -i 's@#auth = "plain[passwd=./sample.passwd,otp=./sample.otp]"@auth = "plain[passwd=/etc/ocserv/ocpasswd]"@g' "${confdir}/ocserv.conf"
+    # sed -i 's@auth = "pam"@#auth = "pam"@g' "${confdir}/ocserv.conf"
+    # sed -i 's@#auth = "plain[passwd=./sample.passwd,otp=./sample.otp]"@auth = "plain[passwd=/etc/ocserv/ocpasswd]"@g' "${confdir}/ocserv.conf"
+    sed -i 's@auth = "pam"@#auth = "pam"\nauth = "plain[passwd=/etc/ocserv/ocpasswd]"@g' "${confdir}/ocserv.conf"
     sed -i 's@#enable-auth = "certificate"@enable-auth = "certificate"@g' "${confdir}/ocserv.conf"
     sed -i 's@#ca-cert = /etc/ocserv/ca.pem@ca-cert = /etc/ocserv/ca.pem@g' "${confdir}/ocserv.conf"
     sed -i "s/max-same-clients = 2/max-same-clients = 8/g" "${confdir}/ocserv.conf"

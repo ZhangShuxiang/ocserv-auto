@@ -108,6 +108,7 @@ _EOF_
 }
 
 function ConfigFirewall {
+    systemctl start firewalld.service
     echo "Adding firewall ports."
     firewall-cmd --permanent --add-port=${port}/tcp
     firewall-cmd --permanent --add-port=${port}/udp
@@ -123,6 +124,8 @@ function ConfigSystem {
     sysctl -w net.ipv4.ip_forward=1
     echo net.ipv4.ip_forward = 1 >> "/etc/sysctl.conf"
     systemctl daemon-reload
+    echo "Enable firewalld service to start during bootup."
+    systemctl enable firewalld.service
     echo "Enable ocserv service to start during bootup."
     systemctl enable ocserv.service
     #开启ocserv服务

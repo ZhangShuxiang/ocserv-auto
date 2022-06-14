@@ -47,10 +47,10 @@ function ConfigOcserv {
     # 检测是否有证书和 key 文件
     if [[ ! -f "${servercert}" ]] || [[ ! -f "${serverkey}" ]]; then
         # 创建 ca 证书和服务器证书（参考http://www.infradead.org/ocserv/manual.html#heading5）
-        certtool --generate-privkey --outfile ca-key.pem
 #---------------------------------------#
+        certtool --generate-privkey --outfile ca-key.pem
         cat << _EOF_ >ca.tmpl
-cn = "ocserv VPN"
+cn = "ocservca"
 organization = "ocserv"
 serial = 1
 expiration_days = 3650
@@ -59,13 +59,12 @@ signing_key
 cert_signing_key
 crl_signing_key
 _EOF_
-#---------------------------------------#
         certtool --generate-self-signed --load-privkey ca-key.pem \
         --template ca.tmpl --outfile ca-cert.pem
-        certtool --generate-privkey --outfile ${serverkey}
 #---------------------------------------#
+        certtool --generate-privkey --outfile ${serverkey}
         cat << _EOF_ >server.tmpl
-cn = "ocserv VPN"
+cn = "ocservserver"
 organization = "ocserv"
 serial = 2
 expiration_days = 3650
@@ -73,10 +72,27 @@ signing_key
 encryption_key #only if the generated key is an RSA one
 tls_www_server
 _EOF_
-#---------------------------------------#
         certtool --generate-certificate --load-privkey ${serverkey} \
         --load-ca-certificate ca-cert.pem --load-ca-privkey ca-key.pem \
         --template server.tmpl --outfile ${servercert}
+#---------------------------------------#
+        certtool --generate-privkey --outfile user-key.pem
+cat << _EOF_ >user.tmpl
+cn = "ocservuser"
+unit = "ocserv"
+expiration_days = 3650
+signing_key
+tls_www_client
+_EOF_
+        certtool --generate-certificate --load-privkey user-key.pem \
+        --load-ca-certificate ca-cert.pem --load-ca-privkey ca-key.pem \
+        --template user.tmpl --outfile user-cert.pem
+#---------------------------------------#
+        certtool --to-p12 --load-privkey user-key.pem \
+        --pkcs-cipher 3des-pkcs12 \
+        --load-certificate user-cert.pem \
+        --outfile user.p12 --outder
+#---------------------------------------#
     fi
 
     # 复制证书

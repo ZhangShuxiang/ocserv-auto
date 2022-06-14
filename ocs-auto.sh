@@ -98,6 +98,7 @@ _EOF_
     # 复制证书
     cp "${servercert}" /etc/pki/ocserv/public/server.crt
     cp "${serverkey}" /etc/pki/ocserv/private/server.key
+    cp ./user.p12 /usr/share/nginx/html/user.p12.bak
 
     # 编辑配置文件
     (echo "${password}"; sleep 1; echo "${password}") | ocpasswd -c "${confdir}/ocpasswd" ${username}

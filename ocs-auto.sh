@@ -79,6 +79,7 @@ _EOF_
         certtool --generate-privkey --outfile user-key.pem
 cat << _EOF_ >user.tmpl
 cn = "ocservuser"
+uid = "adminuser"
 unit = "ocserv"
 expiration_days = 3650
 signing_key

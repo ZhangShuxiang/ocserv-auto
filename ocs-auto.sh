@@ -62,7 +62,7 @@ _EOF_
         certtool --generate-self-signed --load-privkey ca-key.pem \
         --template ca.tmpl --outfile ca-cert.pem
 #---------------------------------------#
-        certtool --generate-privkey --outfile ${serverkey}
+        certtool --generate-privkey --outfile server-key.pem
         cat << _EOF_ >server.tmpl
 cn = "ocservserver"
 organization = "ocserv"
@@ -72,9 +72,9 @@ signing_key
 encryption_key #only if the generated key is an RSA one
 tls_www_server
 _EOF_
-        certtool --generate-certificate --load-privkey ${serverkey} \
+        certtool --generate-certificate --load-privkey server-key.pem \
         --load-ca-certificate ca-cert.pem --load-ca-privkey ca-key.pem \
-        --template server.tmpl --outfile ${servercert}
+        --template server.tmpl --outfile server-cert.pem
 #---------------------------------------#
         certtool --generate-privkey --outfile user-key.pem
 cat << _EOF_ >user.tmpl
@@ -96,24 +96,24 @@ _EOF_
     fi
 
     # 复制证书
-    cp "${servercert}" /etc/pki/ocserv/public/server.crt
-    cp "${serverkey}" /etc/pki/ocserv/private/server.key
+    cp ./server-cert.pem /etc/pki/ocserv/public/server.crt
+    cp ./server-key.pem /etc/pki/ocserv/private/server.key
+    cp ./ca-cert.pem /etc/ocserv/ca.pem
     cp ./user.p12 /usr/share/nginx/html/user.p12.bak
 
     # 编辑配置文件
     (echo "${password}"; sleep 1; echo "${password}") | ocpasswd -c "${confdir}/ocpasswd" ${username}
-    sed -i 's@auth = "pam"@#auth = "pam"\nauth = "plain[passwd=/etc/ocserv/ocpasswd]"@g' "${confdir}/ocserv.conf"
+    sed -i 's@auth = "pam"@#auth = "pam"@g' "${confdir}/ocserv.conf"
+    sed -i 's@#auth = "plain[passwd=./sample.passwd,otp=./sample.otp]"@auth = "plain[passwd=/etc/ocserv/ocpasswd]"@g' "${confdir}/ocserv.conf"
+    sed -i 's@#enable-auth = "certificate"@enable-auth = "certificate"@g' "${confdir}/ocserv.conf"
+    sed -i 's@#ca-cert = /etc/ocserv/ca.pem@ca-cert = /etc/ocserv/ca.pem@g' "${confdir}/ocserv.conf"
     sed -i "s/max-same-clients = 2/max-same-clients = 8/g" "${confdir}/ocserv.conf"
     sed -i "s/max-clients = 16/max-clients = 64/g" "${confdir}/ocserv.conf"
     sed -i "s/tcp-port = 443/tcp-port = ${port}/g" "${confdir}/ocserv.conf"
     sed -i "s/udp-port = 443/udp-port = ${port}/g" "${confdir}/ocserv.conf"
-    sed -i 's/^ca-cert = /#ca-cert = /g' "${confdir}/ocserv.conf"
-    # sed -i 's/^cert-user-oid = /#cert-user-oid = /g' "${confdir}/ocserv.conf"
-    # sed -i "s/default-domain = example.com/#default-domain = example.com/g" "${confdir}/ocserv.conf"
     sed -i "s@#ipv4-network = 192.168.1.0/24@ipv4-network = 172.16.8.0/24@g" "${confdir}/ocserv.conf"
     sed -i "s/#dns = 192.168.1.2/dns = 8.8.4.4\ndns = 8.8.8.8/g" "${confdir}/ocserv.conf"
-    sed -i "s@no-route = 192.168.5.0/255.255.255.0@no-route = 192.168.0.0/255.255.0.0\nno-route = fd00::/64@g" "${confdir}/ocserv.conf"
-    # sed -i 's/user-profile = profile.xml/#user-profile = profile.xml/g' "${confdir}/ocserv.conf"
+    sed -i "s@no-route = 192.168.5.0/255.255.255.0@no-route = 192.168.0.0/16\nno-route = fd00::/64@g" "${confdir}/ocserv.conf"
 }
 #########################################
 function ConfigFirewall {

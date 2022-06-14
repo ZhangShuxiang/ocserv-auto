@@ -1,8 +1,7 @@
 #!/bin/bash
-
 basepath=$(dirname $0)
 cd ${basepath}
-
+#########################################
 function ConfigEnvironmentVariable {
     # 变量设置
     # 服务器的证书和key文件，放在本脚本的同目录下，key文件的权限应该是600或者400
@@ -32,11 +31,10 @@ function ConfigEnvironmentVariable {
         password=${passwordtmp}
     fi
 }
-
+#########################################
 function InstallOcserv {
     # 升级系统
     #dnf update -y -q
-
     # 安装 epel-release
     if [ $(grep epel /etc/yum.repos.d/*.repo | wc -l) -eq 0 ]; then
         dnf install -y -q epel-release && dnf clean all && dnf makecache fast
@@ -44,13 +42,13 @@ function InstallOcserv {
     # 安装ocserv
     dnf install -y ocserv gnutls-utils nginx
 }
-
+#########################################
 function ConfigOcserv {
     # 检测是否有证书和 key 文件
     if [[ ! -f "${servercert}" ]] || [[ ! -f "${serverkey}" ]]; then
         # 创建 ca 证书和服务器证书（参考http://www.infradead.org/ocserv/manual.html#heading5）
         certtool --generate-privkey --outfile ca-key.pem
-#########################################
+#---------------------------------------#
         cat << _EOF_ >ca.tmpl
 cn = "ocserv VPN"
 organization = "ocserv"
@@ -61,11 +59,11 @@ signing_key
 cert_signing_key
 crl_signing_key
 _EOF_
-#########################################
+#---------------------------------------#
         certtool --generate-self-signed --load-privkey ca-key.pem \
         --template ca.tmpl --outfile ca-cert.pem
         certtool --generate-privkey --outfile ${serverkey}
-#########################################
+#---------------------------------------#
         cat << _EOF_ >server.tmpl
 cn = "ocserv VPN"
 organization = "ocserv"
@@ -75,7 +73,7 @@ signing_key
 encryption_key #only if the generated key is an RSA one
 tls_www_server
 _EOF_
-#########################################
+#---------------------------------------#
         certtool --generate-certificate --load-privkey ${serverkey} \
         --load-ca-certificate ca-cert.pem --load-ca-privkey ca-key.pem \
         --template server.tmpl --outfile ${servercert}
@@ -87,7 +85,6 @@ _EOF_
 
     # 编辑配置文件
     (echo "${password}"; sleep 1; echo "${password}") | ocpasswd -c "${confdir}/ocpasswd" ${username}
-
     sed -i 's@auth = "pam"@#auth = "pam"\nauth = "plain[passwd=/etc/ocserv/ocpasswd]"@g' "${confdir}/ocserv.conf"
     sed -i "s/max-same-clients = 2/max-same-clients = 8/g" "${confdir}/ocserv.conf"
     sed -i "s/max-clients = 16/max-clients = 64/g" "${confdir}/ocserv.conf"
@@ -99,11 +96,11 @@ _EOF_
     sed -i "s@#ipv4-network = 192.168.1.0/24@ipv4-network = 172.16.8.0/24@g" "${confdir}/ocserv.conf"
     sed -i "s/#dns = 192.168.1.2/dns = 8.8.4.4\ndns = 8.8.8.8/g" "${confdir}/ocserv.conf"
     sed -i "s@no-route = 192.168.5.0/255.255.255.0@no-route = 192.168.0.0/255.255.0.0\no-route = fd00::/64@g" "${confdir}/ocserv.conf"
-    # sed -i "s/cookie-timeout = 300/cookie-timeout = 86400/g" "${confdir}/ocserv.conf"
     sed -i 's/user-profile = profile.xml/#user-profile = profile.xml/g' "${confdir}/ocserv.conf"
 }
-
+#########################################
 function ConfigFirewall {
+    #设置防火墙
     echo "Adding firewall ports."
     systemctl start firewalld.service
     firewall-cmd --permanent --add-port=26685/tcp
@@ -115,13 +112,9 @@ function ConfigFirewall {
     echo "Reload firewall configure."
     firewall-cmd --reload
 }
-
+#########################################
 function ConfigSystem {
     #修改系统
-    # echo "Enable IP forward."
-    # sysctl -w net.ipv4.ip_forward=1
-    # echo net.ipv4.ip_forward = 1 >> "/etc/sysctl.conf"
-    # systemctl daemon-reload
     echo "Enable firewalld service to start during bootup."
     systemctl enable firewalld.service
     echo "Enable ocserv service to start during bootup."
@@ -130,11 +123,10 @@ function ConfigSystem {
     systemctl start ocserv.service
     echo
 }
-
+#########################################
 ConfigEnvironmentVariable $@
 InstallOcserv
 ConfigOcserv
 ConfigFirewall
 ConfigSystem
-
 exit 0

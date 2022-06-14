@@ -95,7 +95,7 @@ _EOF_
     # sed -i "s/default-domain = example.com/#default-domain = example.com/g" "${confdir}/ocserv.conf"
     sed -i "s@#ipv4-network = 192.168.1.0/24@ipv4-network = 172.16.8.0/24@g" "${confdir}/ocserv.conf"
     sed -i "s/#dns = 192.168.1.2/dns = 8.8.4.4\ndns = 8.8.8.8/g" "${confdir}/ocserv.conf"
-    sed -i "s@no-route = 192.168.5.0/255.255.255.0@no-route = 192.168.0.0/255.255.0.0\no-route = fd00::/64@g" "${confdir}/ocserv.conf"
+    sed -i "s@no-route = 192.168.5.0/255.255.255.0@no-route = 192.168.0.0/255.255.0.0\nno-route = fd00::/64@g" "${confdir}/ocserv.conf"
     # sed -i 's/user-profile = profile.xml/#user-profile = profile.xml/g' "${confdir}/ocserv.conf"
 }
 #########################################

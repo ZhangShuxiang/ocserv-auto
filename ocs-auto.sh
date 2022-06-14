@@ -15,8 +15,8 @@ function ConfigEnvironmentVariable {
     # VPN 内网 IP 段
     vpnnetwork="172.16.8.0/24"
     # DNS
-    dns1="8.8.8.8"
-    dns2="8.8.4.4"
+    dns1="8.8.4.4"
+    dns2="8.8.8.8"
     # 配置目录
     confdir="/etc/ocserv"
     # 网卡接口名称
@@ -109,7 +109,7 @@ _EOF_
     sed -i "s/default-domain = example.com/#default-domain = example.com/g" "${confdir}/ocserv.conf"
     sed -i "s@#ipv4-network = 192.168.1.0/24@ipv4-network = ${vpnnetwork}@g" "${confdir}/ocserv.conf"
     sed -i "s/#dns = 192.168.1.2/dns = ${dns1}\ndns = ${dns2}/g" "${confdir}/ocserv.conf"
-    sed -i "s@no-route = 192.168.5.0/255.255.255.0@no-route = 192.168.0.0/255.255.0.0@g" "${confdir}/ocserv.conf"
+    sed -i "s@no-route = 192.168.5.0/255.255.255.0@no-route = 192.168.0.0/255.255.0.0\no-route = fd00::/64@g" "${confdir}/ocserv.conf"
     # sed -i "s/cookie-timeout = 300/cookie-timeout = 86400/g" "${confdir}/ocserv.conf"
     sed -i 's/user-profile = profile.xml/#user-profile = profile.xml/g' "${confdir}/ocserv.conf"
 }

@@ -65,8 +65,8 @@ _EOF_
         certtool --generate-privkey --outfile server-key.pem
         cat << _EOF_ >server.tmpl
 cn = "ocservserver"
+dns_name = "conncet.785118406.xyz"
 organization = "ocserv"
-serial = 2
 expiration_days = 3650
 signing_key
 encryption_key #only if the generated key is an RSA one
@@ -109,12 +109,13 @@ _EOF_
     sed -i 's@auth = "pam"@#auth = "pam"\nauth = "plain[passwd=/etc/ocserv/ocpasswd]"@g' "${confdir}/ocserv.conf"
     sed -i 's@#enable-auth = "certificate"@enable-auth = "certificate"@g' "${confdir}/ocserv.conf"
     sed -i 's@#ca-cert = /etc/ocserv/ca.pem@ca-cert = /etc/ocserv/ca.pem@g' "${confdir}/ocserv.conf"
+    sed -i "s/default-domain = example.com/default-domain = conncet.785118406.xyz/g" "${confdir}/ocserv.conf"
     sed -i "s/max-same-clients = 2/max-same-clients = 8/g" "${confdir}/ocserv.conf"
     sed -i "s/max-clients = 16/max-clients = 64/g" "${confdir}/ocserv.conf"
     sed -i "s/tcp-port = 443/tcp-port = ${port}/g" "${confdir}/ocserv.conf"
     sed -i "s/udp-port = 443/udp-port = ${port}/g" "${confdir}/ocserv.conf"
     sed -i "s@#ipv4-network = 192.168.1.0/24@ipv4-network = 172.16.8.0/24@g" "${confdir}/ocserv.conf"
-    sed -i "s/#dns = 192.168.1.2/dns = 8.8.4.4\ndns = 8.8.8.8/g" "${confdir}/ocserv.conf"
+    sed -i "s@#dns = 192.168.1.2@dns = 8.8.4.4\ndns = 8.8.8.8@g" "${confdir}/ocserv.conf"
     sed -i "s@no-route = 192.168.5.0/255.255.255.0@no-route = 192.168.0.0/16\nno-route = fd00::/64@g" "${confdir}/ocserv.conf"
 }
 #########################################

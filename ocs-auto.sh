@@ -137,15 +137,15 @@ _EOF_
 #########################################
 function ConfigFirewall {
     #设置防火墙
-    echo "Adding firewall ports."
+    #Adding firewall ports
     systemctl start firewalld.service
     firewall-cmd --permanent --add-port=26685/tcp
     firewall-cmd --permanent --add-port=${port}/tcp
     firewall-cmd --permanent --add-port=${port}/udp
     firewall-cmd --permanent --add-port=80/tcp
-    echo "Allow firewall to forward."
+    #Allow firewall to forward
     firewall-cmd --permanent --add-masquerade
-    echo "Reload firewall configure."
+    #Reload firewall configure
     firewall-cmd --reload
 }
 #########################################
@@ -166,4 +166,5 @@ ConfigOcserv
 ConfigHtml
 ConfigFirewall
 ConfigSystem
+echo "Successful!"
 exit

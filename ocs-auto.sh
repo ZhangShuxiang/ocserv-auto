@@ -47,9 +47,8 @@ function InstallOcserv {
     dnf install -y ocserv gnutls-utils nginx
 }
 #########################################
-function ConfigOcserv {
+function InstallCert {
     # 创建 ca 证书和服务器证书（参考http://www.infradead.org/ocserv/manual.html#heading5）
-#---------------------------------------#
     certtool --generate-privkey --outfile ca-key.pem
     cat << _EOF_ >ca.tmpl
 cn = "ocservca"
@@ -101,7 +100,9 @@ _EOF_
     cp ./server-key.pem /etc/pki/ocserv/private/server.key
     cp ./ca-cert.pem ${confdir}/ca.pem
     cp ./user.p12 ${htmldir}/user.p12.bak
-#---------------------------------------#
+}
+#########################################
+function ConfigOcserv {
     # 编辑配置文件
     (echo "${password}"; sleep 1; echo "${password}") | ocpasswd -c "${confdir}/ocpasswd" ${username}
     cp ${confdir}/ocserv.conf ${confdir}/ocserv.conf.bak
@@ -116,7 +117,9 @@ _EOF_
     sed -i "s@#ipv4-network = 192.168.1.0/24@ipv4-network = 172.16.8.0/24@g" "${confdir}/ocserv.conf"
     sed -i "s@#dns = 192.168.1.2@dns = 8.8.4.4\ndns = 8.8.8.8@g" "${confdir}/ocserv.conf"
     sed -i "s@no-route = 192.168.5.0/255.255.255.0@no-route = 192.168.0.0/16\nno-route = fd00::/64@g" "${confdir}/ocserv.conf"
-#---------------------------------------#
+}
+#########################################
+function ConfigHtml {
     mv ${htmldir}/index.html ${htmldir}/index.html.bak
     cat << _EOF_ >${htmldir}/index.html
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -159,9 +162,11 @@ function ConfigSystem {
     echo
 }
 #########################################
-ConfigEnvironmentVariable $@
+ConfigEnvironmentVariable
 InstallOcserv
+InstallCert
 ConfigOcserv
+ConfigHtml
 ConfigFirewall
 ConfigSystem
-exit 0
+exit

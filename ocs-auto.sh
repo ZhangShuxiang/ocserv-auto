@@ -48,7 +48,7 @@ function InstallOcserv {
 }
 #########################################
 function InstallCert {
-    #创建ca证书和服务器证书（参考http://www.infradead.org/ocserv/manual.html#heading5）
+    #创建证书（参考http://www.infradead.org/ocserv/manual.html#heading5）
     certtool --generate-privkey --outfile ca-key.pem
     cat << _EOF_ >ca.tmpl
 cn = "ocservca"
@@ -89,22 +89,25 @@ _EOF_
     certtool --generate-certificate --load-privkey user-key.pem \
     --load-ca-certificate ca-cert.pem --load-ca-privkey ca-key.pem \
     --template user.tmpl --outfile user-cert.pem
-#---------------------------------------#
+}
+#########################################
+function InstallUserCert {
+    #导出用户证书
     certtool --to-p12 --load-privkey user-key.pem \
     --pkcs-cipher 3des-pkcs12 \
     --load-certificate user-cert.pem \
     --outfile user.p12 --outder
-#---------------------------------------#
-    #复制证书
+}
+#########################################
+function ConfigOcserv {
+    #复制证书文件
     cp ./server-cert.pem /etc/pki/ocserv/public/server.crt
     cp ./server-key.pem /etc/pki/ocserv/private/server.key
     cp ./ca-cert.pem ${confdir}/ca.pem
     cp ./user.p12 ${htmldir}/user.p12.bak
-}
-#########################################
-function ConfigOcserv {
-    #编辑配置文件
+    #添加用户和密码
     (echo "${password}"; sleep 1; echo "${password}") | ocpasswd -c "${confdir}/ocpasswd" ${username}
+    #编辑配置文件
     cp ${confdir}/ocserv.conf ${confdir}/ocserv.conf.bak
     sed -i 's@auth = "pam"@#auth = "pam"\nauth = "plain[passwd=/etc/ocserv/ocpasswd]"@g' "${confdir}/ocserv.conf"
     sed -i 's@#enable-auth = "certificate"@enable-auth = "certificate"@g' "${confdir}/ocserv.conf"
@@ -119,8 +122,8 @@ function ConfigOcserv {
     sed -i "s@no-route = 192.168.5.0/255.255.255.0@no-route = 192.168.0.0/16\nno-route = fd00::/64@g" "${confdir}/ocserv.conf"
 }
 #########################################
-function ConfigHtml {
-    #添加网页文件
+function InstallHtml {
+    #添加公益404网页文件
     mv ${htmldir}/index.html ${htmldir}/index.html.bak
     cat << _EOF_ >${htmldir}/index.html
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -136,21 +139,21 @@ _EOF_
 }
 #########################################
 function ConfigFirewall {
-    #设置防火墙
-    #Adding firewall ports
+    #开启防火墙服务
     systemctl start firewalld.service
+    #添加防火墙允许端口
     firewall-cmd --permanent --add-port=26685/tcp
     firewall-cmd --permanent --add-port=${port}/tcp
     firewall-cmd --permanent --add-port=${port}/udp
     firewall-cmd --permanent --add-port=80/tcp
-    #Allow firewall to forward
+    #开启伪装IP
     firewall-cmd --permanent --add-masquerade
-    #Reload firewall configure
+    #重新加载防火墙
     firewall-cmd --reload
 }
 #########################################
 function ConfigSystem {
-    #设置开机启动
+    #添加开机启动
     systemctl enable firewalld.service
     systemctl enable ocserv.service
     systemctl enable nginx.service
@@ -160,11 +163,19 @@ function ConfigSystem {
 }
 #########################################
 ConfigEnvironment
-InstallOcserv
-InstallCert
-ConfigOcserv
-ConfigHtml
-ConfigFirewall
-ConfigSystem
-echo "Successful!"
+echo "ConfigEnvironment Successful!"
+InstallOcserv &
+echo "InstallOcserv Successful!"
+InstallCert &
+echo "InstallCert Successful!"
+InstallUserCert
+echo "InstallUserCert Successful!"
+ConfigOcserv &
+echo "ConfigOcserv Successful!"
+InstallHtml &
+echo "InstallHtml Successful!"
+ConfigFirewall &
+echo "ConfigFirewall Successful!"
+ConfigSystem &
+echo "ConfigSystem Successful!"
 exit

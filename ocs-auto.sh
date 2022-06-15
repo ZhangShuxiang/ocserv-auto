@@ -1,6 +1,6 @@
 #!/bin/bash
 basepath=$(dirname $0)
-cd ${basepath}/ocsauto
+cd ${basepath}&&mkdir ocsauto&&cd ocsauto
 #########################################
 function ConfigEnvironmentVariable {
     # 变量设置
@@ -113,8 +113,8 @@ _EOF_
     (echo "${password}"; sleep 1; echo "${password}") | ocpasswd -c "${confdir}/ocpasswd" ${username}
     mv ${confdir}/ocserv.conf ${confdir}/ocserv.conf.bak
     cat << _EOF_ >ocserv.conf
-auth = "certificate"
-enable-auth = "plain[passwd=/etc/ocserv/ocpasswd]"
+auth = "plain[passwd=/etc/ocserv/ocpasswd]"
+enable-auth = "certificate"
 server-cert = /etc/pki/ocserv/public/server.crt
 server-key = /etc/pki/ocserv/private/server.key
 ca-cert = /etc/ocserv/ca.pem
@@ -135,7 +135,6 @@ _EOF_
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="zh-cn">
   <head>
-    <title>Test Page for the Nginx HTTP Server on FreeBSD</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
   </head>
   <body>

@@ -122,6 +122,7 @@ cert-user-oid = 0.9.2342.19200300.100.1.1
 default-domain = conncet.785118406.xyz
 max-same-clients = 8
 max-clients = 64
+cisco-client-compat = true
 tcp-port = ${port}
 udp-port = ${port}
 ipv4-network = 172.16.8.0/24

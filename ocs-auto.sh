@@ -111,26 +111,18 @@ _EOF_
 
     # 编辑配置文件
     (echo "${password}"; sleep 1; echo "${password}") | ocpasswd -c "${confdir}/ocpasswd" ${username}
-    mv ${confdir}/ocserv.conf ${confdir}/ocserv.conf.bak
-    cat << _EOF_ >ocserv.conf
-auth = "plain[passwd=/etc/ocserv/ocpasswd]"
-enable-auth = "certificate"
-server-cert = /etc/pki/ocserv/public/server.crt
-server-key = /etc/pki/ocserv/private/server.key
-ca-cert = /etc/ocserv/ca.pem
-cert-user-oid = 0.9.2342.19200300.100.1.1
-default-domain = conncet.785118406.xyz
-max-same-clients = 8
-max-clients = 64
-cisco-client-compat = true
-tcp-port = ${port}
-udp-port = ${port}
-ipv4-network = 172.16.8.0/24
-dns = 8.8.4.4
-dns = 8.8.8.8
-no-route = 192.168.0.0/16
-_EOF_
-    cp ./ocserv.conf ${confdir}/ocserv.conf
+    cp ${confdir}/ocserv.conf ${confdir}/ocserv.conf.bak
+    sed -i 's@auth = "pam"@#auth = "pam"\nauth = "plain[passwd=/etc/ocserv/ocpasswd]"@g' "${confdir}/ocserv.conf"
+    sed -i 's@#enable-auth = "certificate"@enable-auth = "certificate"@g' "${confdir}/ocserv.conf"
+    sed -i 's@#ca-cert = /etc/ocserv/ca.pem@ca-cert = /etc/ocserv/ca.pem@g' "${confdir}/ocserv.conf"
+    sed -i "s/default-domain = example.com/default-domain = conncet.785118406.xyz/g" "${confdir}/ocserv.conf"
+    sed -i "s/max-same-clients = 2/max-same-clients = 8/g" "${confdir}/ocserv.conf"
+    sed -i "s/max-clients = 16/max-clients = 64/g" "${confdir}/ocserv.conf"
+    sed -i "s/tcp-port = 443/tcp-port = ${port}/g" "${confdir}/ocserv.conf"
+    sed -i "s/udp-port = 443/udp-port = ${port}/g" "${confdir}/ocserv.conf"
+    sed -i "s@#ipv4-network = 192.168.1.0/24@ipv4-network = 172.16.8.0/24@g" "${confdir}/ocserv.conf"
+    sed -i "s@#dns = 192.168.1.2@dns = 8.8.4.4\ndns = 8.8.8.8@g" "${confdir}/ocserv.conf"
+    sed -i "s@no-route = 192.168.5.0/255.255.255.0@no-route = 192.168.0.0/16\nno-route = fd00::/64@g" "${confdir}/ocserv.conf"
     mv ${htmldir}/index.html ${htmldir}/index.html.bak
     cat << _EOF_ >index.html
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">

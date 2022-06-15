@@ -2,14 +2,14 @@
 basepath=$(dirname $0)
 cd ${basepath}&&mkdir ocsauto&&cd ocsauto
 #########################################
-function ConfigEnvironmentVariable {
-    # 变量设置
-    # 配置目录
+function ConfigEnvironment {
+    #变量设置
+    #配置目录
     confdir="/etc/ocserv"
     htmldir="/usr/share/nginx/html"
-    # 端口，默认是443
+    #端口，默认是443
     port=8080
-    # 用户名，默认是adminuser
+    #用户名，默认是adminuser
     username=adminuser
     echo -e "\nPlease input ocserv user name."
     printf "Default user name is \e[33m${username}\e[0m, let it blank to use this user name: "
@@ -17,7 +17,7 @@ function ConfigEnvironmentVariable {
     if [[ -n "${usernametmp}" ]]; then
         username=${usernametmp}
     fi
-    # 随机密码
+    #随机密码
     randstr() {
         index=0
         str=""
@@ -37,18 +37,18 @@ function ConfigEnvironmentVariable {
 }
 #########################################
 function InstallOcserv {
-    # 升级系统
+    #升级系统
     #dnf update -y -q
-    # 安装 epel-release
+    #安装 epel-release
     if [ $(grep epel /etc/yum.repos.d/*.repo | wc -l) -eq 0 ]; then
         dnf install -y -q epel-release && dnf clean all && dnf makecache fast
     fi
-    # 安装ocserv
+    #安装ocserv
     dnf install -y ocserv gnutls-utils nginx
 }
 #########################################
 function InstallCert {
-    # 创建 ca 证书和服务器证书（参考http://www.infradead.org/ocserv/manual.html#heading5）
+    #创建ca证书和服务器证书（参考http://www.infradead.org/ocserv/manual.html#heading5）
     certtool --generate-privkey --outfile ca-key.pem
     cat << _EOF_ >ca.tmpl
 cn = "ocservca"
@@ -95,7 +95,7 @@ _EOF_
     --load-certificate user-cert.pem \
     --outfile user.p12 --outder
 #---------------------------------------#
-    # 复制证书
+    #复制证书
     cp ./server-cert.pem /etc/pki/ocserv/public/server.crt
     cp ./server-key.pem /etc/pki/ocserv/private/server.key
     cp ./ca-cert.pem ${confdir}/ca.pem
@@ -103,7 +103,7 @@ _EOF_
 }
 #########################################
 function ConfigOcserv {
-    # 编辑配置文件
+    #编辑配置文件
     (echo "${password}"; sleep 1; echo "${password}") | ocpasswd -c "${confdir}/ocpasswd" ${username}
     cp ${confdir}/ocserv.conf ${confdir}/ocserv.conf.bak
     sed -i 's@auth = "pam"@#auth = "pam"\nauth = "plain[passwd=/etc/ocserv/ocpasswd]"@g' "${confdir}/ocserv.conf"
@@ -120,6 +120,7 @@ function ConfigOcserv {
 }
 #########################################
 function ConfigHtml {
+    #添加网页文件
     mv ${htmldir}/index.html ${htmldir}/index.html.bak
     cat << _EOF_ >${htmldir}/index.html
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -149,20 +150,16 @@ function ConfigFirewall {
 }
 #########################################
 function ConfigSystem {
-    #修改系统
-    echo "Enable firewalld service to start during bootup."
+    #设置开机启动
     systemctl enable firewalld.service
-    echo "Enable ocserv service to start during bootup."
     systemctl enable ocserv.service
-    echo "Enable nginx service to start during bootup."
     systemctl enable nginx.service
     #开启服务
     systemctl start ocserv.service
     systemctl start nginx.service
-    echo
 }
 #########################################
-ConfigEnvironmentVariable
+ConfigEnvironment
 InstallOcserv
 InstallCert
 ConfigOcserv

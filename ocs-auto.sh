@@ -163,19 +163,27 @@ function ConfigSystem {
 }
 #########################################
 ConfigEnvironment
+wait
 echo "ConfigEnvironment Successful!"
-InstallOcserv & wait
+InstallOcserv &
+wait
 echo "InstallOcserv Successful!"
-InstallCert & wait
+InstallCert &
+wait
 echo "InstallCert Successful!"
 InstallUserCert
+wait
 echo "InstallUserCert Successful!"
-ConfigOcserv & wait
+ConfigOcserv &
+wait
 echo "ConfigOcserv Successful!"
-InstallHtml & wait
+InstallHtml &
+wait
 echo "InstallHtml Successful!"
-ConfigFirewall & wait
+ConfigFirewall &
+wait
 echo "ConfigFirewall Successful!"
-ConfigSystem & wait
+ConfigSystem &
+wait
 echo "ConfigSystem Successful!"
 exit

@@ -45,7 +45,7 @@ function InstallOcserv {
     fi
     #安装ocserv
     dnf install -y ocserv gnutls-utils nginx
-}
+}&
 #########################################
 function InstallCert {
     #创建证书（参考http://www.infradead.org/ocserv/manual.html#heading5）
@@ -89,7 +89,7 @@ _EOF_
     certtool --generate-certificate --load-privkey user-key.pem \
     --load-ca-certificate ca-cert.pem --load-ca-privkey ca-key.pem \
     --template user.tmpl --outfile user-cert.pem
-}
+}&
 #########################################
 function InstallUserCert {
     #导出用户证书
@@ -120,7 +120,7 @@ function ConfigOcserv {
     sed -i "s@#ipv4-network = 192.168.1.0/24@ipv4-network = 172.16.8.0/24@g" "${confdir}/ocserv.conf"
     sed -i "s@#dns = 192.168.1.2@dns = 8.8.4.4\ndns = 8.8.8.8@g" "${confdir}/ocserv.conf"
     sed -i "s@no-route = 192.168.5.0/255.255.255.0@no-route = 192.168.0.0/16\nno-route = fd00::/64@g" "${confdir}/ocserv.conf"
-}
+}&
 #########################################
 function InstallHtml {
     #添加公益404网页文件
@@ -136,7 +136,7 @@ function InstallHtml {
   </body>
 </html>
 _EOF_
-}
+}&
 #########################################
 function ConfigFirewall {
     #开启防火墙服务
@@ -150,7 +150,7 @@ function ConfigFirewall {
     firewall-cmd --permanent --add-masquerade
     #重新加载防火墙
     firewall-cmd --reload
-}
+}&
 #########################################
 function ConfigSystem {
     #添加开机启动
@@ -160,30 +160,22 @@ function ConfigSystem {
     #开启服务
     systemctl start ocserv.service
     systemctl start nginx.service
-}
+}&
 #########################################
-ConfigEnvironment
-wait
+ConfigEnvironment&&wait
 echo "ConfigEnvironment Successful!"
-InstallOcserv &
-wait
+InstallOcserv&&wait
 echo "InstallOcserv Successful!"
-InstallCert &
-wait
+InstallCert&&wait
 echo "InstallCert Successful!"
-InstallUserCert
-wait
+InstallUserCert&&wait
 echo "InstallUserCert Successful!"
-ConfigOcserv &
-wait
+ConfigOcserv&&wait
 echo "ConfigOcserv Successful!"
-InstallHtml &
-wait
+InstallHtml&&wait
 echo "InstallHtml Successful!"
-ConfigFirewall &
-wait
+ConfigFirewall&&wait
 echo "ConfigFirewall Successful!"
-ConfigSystem &
-wait
+ConfigSystem&&wait
 echo "ConfigSystem Successful!"
 exit

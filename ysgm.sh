@@ -1,4 +1,5 @@
 #!/bin/bash
+#curl -LO https://github.com/ZhangShuxiang/ocserv-auto/raw/master/ysgm.sh&&chmod +x ysgm.sh&&sudo sh ysgm.sh
 #---------------------------------------------------
 utsc(){
 sudo -E sed -e 's|^mirrorlist=|#mirrorlist=|g' \
@@ -14,13 +15,14 @@ repo(){
 sudo -E cat << _EOF_ >/etc/yum.repos.d/mongodb-org-5.0.repo
 [mongodb-org-5.0]
 name=MongoDB Repository
-baseurl=https://repo.mongodb.org/yum/redhat/$releasever/mongodb-org/5.0/x86_64/
+baseurl=https://repo.mongodb.org/yum/redhat/\$releasever/mongodb-org/5.0/x86_64/
 gpgcheck=1
 enabled=1
 gpgkey=https://www.mongodb.org/static/pgp/server-5.0.asc
 _EOF_
 }
 #---------------------------------------------------
+$1
 repo
 sudo -E dnf makecache -qy
 sudo -E dnf install -qy epel-release

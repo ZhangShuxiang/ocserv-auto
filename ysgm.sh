@@ -1,5 +1,9 @@
 #!/bin/bash
+#---------------------------------------------------
 #curl -LO https://github.com/ZhangShuxiang/ocserv-auto/raw/master/ysgm.sh&&chmod +x ysgm.sh&&sudo sh ysgm.sh
+#(*.yuanshen.com)
+#(*.hoyoverse.com)
+#(*.mihoyo.com)
 #---------------------------------------------------
 utsc(){
 sudo -E sed -e 's|^mirrorlist=|#mirrorlist=|g' \
@@ -24,24 +28,27 @@ _EOF_
 #---------------------------------------------------
 install(){
 sudo -E dnf makecache -qy
-sudo -E dnf install -qy epel-release
-sudo -E dnf makecache -qy
-sudo -E dnf install -qy java-17-openjdk.x86_64
-sudo -E dnf install -qy mongodb-org
+sudo -E dnf install -qy java-17-openjdk.x86_64 mongodb-org
 }
-#---------------------------------------------------
-#
 #---------------------------------------------------
 firewall(){
 sudo -E firewall-cmd --permanent --add-port=80/tcp
 sudo -E firewall-cmd --permanent --add-port=443/tcp
-sudo -E firewall-cmd --permanent --add-port=8888/tcp
 sudo -E firewall-cmd --permanent --add-port=22102/tcp
 }
 #---------------------------------------------------
+Grasscutter(){
+git clone https://github.com/Koko-boya/Grasscutter_Resources.git
+git clone https://github.com/Grasscutters/Grasscutter.git && cd Grasscutter 
+chmod +x gradlew && ./gradlew jar
+ln -sf $HOME/Grasscutter_Resources/Resources $HOME/Grasscutter/resources
+echo 'chs' | java -jar grasscutter*.jar -handbook
+echo 'chs' | java -jar grasscutter*.jar
+}
+#====================================================
 #utsc
 repo
-#
 install
-#firewall
+firewall
+Grasscutter
 exit

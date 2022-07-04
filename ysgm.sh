@@ -42,7 +42,9 @@ git clone https://github.com/Koko-boya/Grasscutter_Resources.git
 git clone https://github.com/Grasscutters/Grasscutter.git
 ln -sf $HOME/Grasscutter_Resources/Resources $HOME/Grasscutter/resources
 cd Grasscutter && chmod +x gradlew && ./gradlew jar
-#tmux new -s ys#tmux a -t ys#退出会话ctrl+b松开 再按d#结束程序ctrl+c
+#新建会话tmux new -s ys#退出会话tmux detach#查看会话tmux ls
+#进入会话tmux attach -t ys#结束会话tmux kill-session -t ys#切换会话tmux switch -t ys
+#控制台Ctrl+b 帮助？
 #java -jar grasscutter*.jar -handbook
 #java -jar grasscutter*.jar
 }

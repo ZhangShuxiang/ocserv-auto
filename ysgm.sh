@@ -34,7 +34,7 @@ sudo -E dnf install -qy git java-17-openjdk.x86_64 mongodb-org
 firewall(){
 sudo -E firewall-cmd --permanent --add-port=80/tcp
 sudo -E firewall-cmd --permanent --add-port=443/tcp
-sudo -E firewall-cmd --permanent --add-port=22102/tcpgitpull
+sudo -E firewall-cmd --permanent --add-port=22102/tcp
 }
 #---------------------------------------------------
 Grasscutter(){

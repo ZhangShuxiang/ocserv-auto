@@ -1,10 +1,8 @@
 #!/bin/bash
 #---------------------------------------------------
-#curl -LO https://github.com/ZhangShuxiang/ocserv-auto/raw/master/ysgm.sh&&sudo chmod +x ysgm.sh&&sudo sh ysgm.sh
-#(*.yuanshen.com)
-#(*.hoyoverse.com)
-#(*.mihoyo.com)
-#要用root身份运行(sudo su)
+#要用root身份运行,先切换到root用户(sudo su)
+#curl -LO https://github.com/ZhangShuxiang/ocserv-auto/raw/master/ysgm.sh&&chmod +x ysgm.sh&&sh ysgm.sh
+#(*.yuanshen.com)(*.hoyoverse.com)(*.mihoyo.com)>>serverip
 #---------------------------------------------------
 utsc(){
 sed -e 's|^mirrorlist=|#mirrorlist=|g' \
@@ -29,7 +27,7 @@ _EOF_
 #---------------------------------------------------
 install(){
 dnf makecache -qy
-dnf install -qy git java-17-openjdk.x86_64 mongodb-org
+dnf install -qy git tmux java-17-openjdk.x86_64 mongodb-org
 }
 #---------------------------------------------------
 firewall(){
@@ -44,8 +42,9 @@ git clone https://github.com/Koko-boya/Grasscutter_Resources.git
 git clone https://github.com/Grasscutters/Grasscutter.git
 ln -sf $HOME/Grasscutter_Resources/Resources $HOME/Grasscutter/resources
 cd Grasscutter && chmod +x gradlew && ./gradlew jar
-java -jar grasscutter*.jar
-java -jar grasscutter*.jar -handbook
+#tmux new -s ys#tmux a -t ys#退出会话ctrl+b松开 再按d#结束程序ctrl+c
+#java -jar grasscutter*.jar -handbook
+#java -jar grasscutter*.jar
 }
 #====================================================
 #utsc

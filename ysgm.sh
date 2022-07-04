@@ -1,12 +1,12 @@
 #!/bin/bash
 #---------------------------------------------------
-#curl -LO https://github.com/ZhangShuxiang/ocserv-auto/raw/master/ysgm.sh&&chmod +x ysgm.sh&&sudo sh ysgm.sh
+#curl -LO https://github.com/ZhangShuxiang/ocserv-auto/raw/master/ysgm.sh&&sudo chmod +x ysgm.sh&&sudo sh ysgm.sh
 #(*.yuanshen.com)
 #(*.hoyoverse.com)
 #(*.mihoyo.com)
 #---------------------------------------------------
 utsc(){
-echo '123456' | sudo -S sed -e 's|^mirrorlist=|#mirrorlist=|g' \
+sudo -E sed -e 's|^mirrorlist=|#mirrorlist=|g' \
     -e 's|^#baseurl=http://dl.rockylinux.org/$contentdir|baseurl=https://mirrors.ustc.edu.cn/rocky|g' \
     -i.bak \
     /etc/yum.repos.d/Rocky-AppStream.repo \
@@ -16,7 +16,7 @@ echo '123456' | sudo -S sed -e 's|^mirrorlist=|#mirrorlist=|g' \
 }
 #---------------------------------------------------
 repo(){
-echo '123456' | sudo -S cat << _EOF_ >/etc/yum.repos.d/mongodb-org-5.0.repo
+sudo -E cat << _EOF_ >/etc/yum.repos.d/mongodb-org-5.0.repo
 [mongodb-org-5.0]
 name=MongoDB Repository
 baseurl=https://repo.mongodb.org/yum/redhat/\$releasever/mongodb-org/5.0/x86_64/
@@ -27,14 +27,14 @@ _EOF_
 }
 #---------------------------------------------------
 install(){
-echo '123456' | sudo -S dnf makecache -qy
-echo '123456' | sudo -S dnf install -qy java-17-openjdk.x86_64 mongodb-org
+sudo -E dnf makecache -qy
+sudo -E dnf install -qy git java-17-openjdk.x86_64 mongodb-org
 }
 #---------------------------------------------------
 firewall(){
-echo '123456' | sudo -S firewall-cmd --permanent --add-port=80/tcp
-echo '123456' | sudo -S firewall-cmd --permanent --add-port=443/tcp
-echo '123456' | sudo -S firewall-cmd --permanent --add-port=22102/tcpgitpull
+sudo -E firewall-cmd --permanent --add-port=80/tcp
+sudo -E firewall-cmd --permanent --add-port=443/tcp
+sudo -E firewall-cmd --permanent --add-port=22102/tcpgitpull
 }
 #---------------------------------------------------
 Grasscutter(){
@@ -51,5 +51,5 @@ ln -sf $HOME/Grasscutter_Resources/Resources $HOME/Grasscutter/resources
 repo
 install
 firewall
-Grasscutter
+#Grasscutter
 exit

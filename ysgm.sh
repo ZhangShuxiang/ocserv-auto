@@ -6,7 +6,7 @@
 #(*.mihoyo.com)
 #---------------------------------------------------
 utsc(){
-sudo -E sed -e 's|^mirrorlist=|#mirrorlist=|g' \
+echo '123456' | sudo -S sed -e 's|^mirrorlist=|#mirrorlist=|g' \
     -e 's|^#baseurl=http://dl.rockylinux.org/$contentdir|baseurl=https://mirrors.ustc.edu.cn/rocky|g' \
     -i.bak \
     /etc/yum.repos.d/Rocky-AppStream.repo \
@@ -16,7 +16,7 @@ sudo -E sed -e 's|^mirrorlist=|#mirrorlist=|g' \
 }
 #---------------------------------------------------
 repo(){
-sudo -E cat << _EOF_ >/etc/yum.repos.d/mongodb-org-5.0.repo
+echo '123456' | sudo -S cat << _EOF_ >/etc/yum.repos.d/mongodb-org-5.0.repo
 [mongodb-org-5.0]
 name=MongoDB Repository
 baseurl=https://repo.mongodb.org/yum/redhat/\$releasever/mongodb-org/5.0/x86_64/
@@ -27,23 +27,24 @@ _EOF_
 }
 #---------------------------------------------------
 install(){
-sudo -E dnf makecache -qy
-sudo -E dnf install -qy java-17-openjdk.x86_64 mongodb-org
+echo '123456' | sudo -S dnf makecache -qy
+echo '123456' | sudo -S dnf install -qy java-17-openjdk.x86_64 mongodb-org
 }
 #---------------------------------------------------
 firewall(){
-sudo -E firewall-cmd --permanent --add-port=80/tcp
-sudo -E firewall-cmd --permanent --add-port=443/tcp
-sudo -E firewall-cmd --permanent --add-port=22102/tcp
+echo '123456' | sudo -S firewall-cmd --permanent --add-port=80/tcp
+echo '123456' | sudo -S firewall-cmd --permanent --add-port=443/tcp
+echo '123456' | sudo -S firewall-cmd --permanent --add-port=22102/tcpgitpull
 }
 #---------------------------------------------------
 Grasscutter(){
+cd $HOME
 git clone https://github.com/Koko-boya/Grasscutter_Resources.git
-git clone https://github.com/Grasscutters/Grasscutter.git && cd Grasscutter 
-chmod +x gradlew && ./gradlew jar
+git clone https://github.com/Grasscutters/Grasscutter.git
 ln -sf $HOME/Grasscutter_Resources/Resources $HOME/Grasscutter/resources
-echo 'chs' | java -jar grasscutter*.jar -handbook
-echo 'chs' | java -jar grasscutter*.jar
+#cd Grasscutter && chmod +x gradlew && ./gradlew jar
+#echo 'chs' | java -jar grasscutter*.jar
+#echo 'chs' | java -jar grasscutter*.jar -handbook
 }
 #====================================================
 #utsc

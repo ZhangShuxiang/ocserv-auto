@@ -48,7 +48,7 @@ cd Grasscutter && chmod +x gradlew && ./gradlew jar
 #java -jar grasscutter*.jar
 }
 #====================================================
-#utsc
+utsc
 repo
 install
 firewall

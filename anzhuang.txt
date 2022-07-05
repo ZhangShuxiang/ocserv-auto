@@ -9,12 +9,29 @@ https://staticfiles.technoserv.com/ts-it/vpn/
 https://xiu.lanzoux.com/b073c7g4f
 
 
-
-git clone https://github.com/Koko-boya/Grasscutter_Resources.git ./grasscutter
-cd grasscutter 
-mv Resources resources
-curl -LO https://github.com/Grasscutters/Grasscutter/releases/download/v1.2.0/grasscutter-1.2.0.jar
-curl -LO https://github.com/Grasscutters/Grasscutter/raw/development/keystore.p12
-mv grasscutter*.jar grasscutter.jar
-java -jar grasscutter.jar -handbook
-java -jar grasscutter.jar
+2402:4e00::
+2400:3200::1
+2400:3200:baba::1
+2400:da00::6666
+240e:4c:4008::1
+240e:4c:4808::1
+2408:8899::8
+2408:8888::8
+2409:8088::a
+2409:8088::b
+2001:dc7:1000::1 
+240c:f:1:22::6
+240C::6666
+240C::6644
+240e:eb:8001:e01::53
+240e:d9:c200:14c:7472::19e0
+2408:8756:f5f:4::6
+2001:cc0:2fff:1::6666
+2001:4860:4860::8888
+2001:4860:4860::8844
+2606:4700:4700::1111
+2606:4700:4700::1001
+2620:fe::fe
+2620:fe::9
+2620:119:35::35
+2620:119:53::53

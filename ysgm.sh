@@ -31,7 +31,6 @@ dnf install -qy git tmux java-17-openjdk.x86_64 mongodb-org
 }
 #---------------------------------------------------
 firewall(){
-firewall-cmd --permanent --add-port=80/tcp
 firewall-cmd --permanent --add-port=443/tcp
 firewall-cmd --permanent --add-port=22102/tcp
 }

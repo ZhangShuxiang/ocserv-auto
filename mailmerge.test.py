@@ -6,9 +6,11 @@ from mailmerge import MailMerge
 docx = r'E:\Download\py\1\demowd.docx'
 xlsx = r'E:\Download\py\1\demoxl.xlsx'
 
-filepath = os.path.dirname(docx)
-time = time.strftime("%Y%m%d")
-filepath2 = os.mkdir('证书'+time)
+filedir = os.path.dirname(docx)
+dirname = '证书'+time.strftime("%Y%m%d")
+os.mkdir(dirname)
+filepath = filedir+r'\'+dirname
+
 app = xlwings.App(visible=False,add_book=False)
 workbook = app.books.open(xlsx)
 worksheet = xlwings.sheets['证书']

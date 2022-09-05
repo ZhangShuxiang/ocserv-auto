@@ -5,8 +5,9 @@ from mailmerge import MailMerge
 
 #pip install xlwings docx-mailmerge2
 
-docx = r'E:\Download\py\2\考核表模板.docx'
-xlsx = r'E:\Download\py\2\工作表.xlsx'
+docx = r'E:\Download\py\2\考核表模板2.docx'
+xlsx = r'E:\Download\py\2\工作簿.xlsx'
+xlsht = r'恒峯'
 
 time = time.strftime("%Y%m%d%H%M%S")
 filepath = os.path.dirname(xlsx)+r'\考核表'+time
@@ -14,8 +15,7 @@ os.mkdir(filepath)
 
 app1 = xlwings.App(visible=False, add_book=False)
 app1.books.open(xlsx)
-worksheet = xlwings.sheets['sheet1']
-worksheet.range('B:B').api.NumberFormat = "@"
+worksheet = xlwings.sheets(xlsht)
 nrow = worksheet.used_range.last_cell.row
 
 for key in range(1, nrow):

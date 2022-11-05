@@ -1,13 +1,14 @@
 import os
 import time
 import xlwings
+import office
 from mailmerge import MailMerge
 
-#pip install xlwings docx-mailmerge2
+#pip install xlwings docx-mailmerge2 python-office
 
-docx = r'E:\Download\py\2\考核表模板2.docx'
-xlsx = r'E:\Download\py\2\工作簿.xlsx'
-xlsht = r'恒峯'
+docx = r'E:\Download\py\2\#模板\考核证明.docx'
+xlsx = r'E:\Download\py\2\工作表.xlsx'
+xlsht = r'sheet1'
 
 time = time.strftime("%Y%m%d%H%M%S")
 filepath = os.path.dirname(xlsx)+r'\考核表'+time
@@ -25,6 +26,7 @@ for key in range(1, nrow):
             公司=str(worksheet[key, 2].value),
             职称=str(worksheet[key, 3].value),
             年份=str(worksheet[key, 4].value),
+            日期=str(worksheet[key, 6].value),
             考核1=str(worksheet[key, 7].value),
             考核2=str(worksheet[key, 8].value),
             考核3=str(worksheet[key, 9].value),
@@ -32,12 +34,12 @@ for key in range(1, nrow):
             考核5=str(worksheet[key, 11].value),
             评语1=str(worksheet[key, 12].value),
             评语2=str(worksheet[key, 13].value),
-            评语3=str(worksheet[key, 14].value),
-            日期=str(worksheet[key, 6].value))
+            评语3=str(worksheet[key, 14].value))
 
         output = filepath + r'\{}.docx'.format(
             str(worksheet[key, 1].value) +
-            str(worksheet[key, 4].value)+'年度考核')
+            str(worksheet[key, 4].value)+'年度考核表')
         document.write(output)
+        office.word.docx2pdf(output)
 
 app1.quit()

@@ -40,9 +40,7 @@ function InstallOcserv {
     #升级系统
     #dnf update -y -q
     #安装 epel-release
-    if [ $(grep epel /etc/yum.repos.d/*.repo | wc -l) -eq 0 ]; then
-        dnf install -y -q epel-release && dnf clean all && dnf makecache fast
-    fi
+    dnf install -y -q epel-release && dnf clean all && dnf makecache fast
     #安装ocserv
     dnf install -y ocserv gnutls-utils nginx
 }

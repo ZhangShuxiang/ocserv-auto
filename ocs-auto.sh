@@ -8,7 +8,7 @@ function ConfigEnvironment {
     confdir="/etc/ocserv"
     htmldir="/usr/share/nginx/html"
     #端口，默认是443
-    port=8080
+    port=443
     #用户名，默认是adminuser
     username=adminuser
     echo -e "\nPlease input ocserv user name."

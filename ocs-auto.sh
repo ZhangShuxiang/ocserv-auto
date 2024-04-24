@@ -110,7 +110,7 @@ function ConfigOcserv {
     sed -i 's@auth = "pam"@#auth = "pam"\nauth = "plain[passwd=/etc/ocserv/ocpasswd]"@g' "${confdir}/ocserv.conf"
     sed -i 's@#enable-auth = "certificate"@enable-auth = "certificate"@g' "${confdir}/ocserv.conf"
     sed -i 's@#ca-cert = /etc/ocserv/ca.pem@ca-cert = /etc/pki/ocserv/cacerts/ca.pem@g' "${confdir}/ocserv.conf"
-    sed -i "s/default-domain = example.com/default-domain = conncet.785118406.xyz/g" "${confdir}/ocserv.conf"
+    sed -i "s/default-domain = example.com/default-domain = 785118406.xyz/g" "${confdir}/ocserv.conf"
     sed -i "s/tcp-port = 443/tcp-port = ${port}/g" "${confdir}/ocserv.conf"
     sed -i "s/udp-port = 443/udp-port = ${port}/g" "${confdir}/ocserv.conf"
     sed -i "s@#ipv4-network = 192.168.1.0/24@ipv4-network = 172.16.8.0/24@g" "${confdir}/ocserv.conf"

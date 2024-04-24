@@ -41,10 +41,10 @@ function InstallOcserv {
     dnf update -y -q
     #安装 epel-release
     dnf install -y -q epel-release
-    dnf clean all
     dnf makecache
     #安装ocserv
     dnf install -y -q ocserv gnutls-utils nginx
+    dnf clean all
 }
 #########################################
 function InstallCert {

@@ -41,6 +41,7 @@ function InstallOcserv {
     dnf update -y -q
     #安装 epel-release
     dnf install -y -q epel-release
+    sed -i "s/enabled=0/enabled=1/g" /etc/yum.repos.d/epel.repo
     dnf makecache
     #安装ocserv
     dnf install -y -q ocserv gnutls-utils nginx

@@ -52,7 +52,7 @@ function InstallCert {
 cn = "ocservca"
 organization = "ocserv"
 serial = 1
-expiration_days = 3650
+expiration_days = -1
 ca
 signing_key
 cert_signing_key
@@ -66,7 +66,7 @@ _EOF_
 cn = "ocservserver"
 dns_name = "conncet.785118406.xyz"
 organization = "ocserv"
-expiration_days = 3650
+expiration_days = -1
 signing_key
 encryption_key #only if the generated key is an RSA one
 tls_www_server
@@ -80,7 +80,7 @@ _EOF_
 cn = "ocservuser"
 uid = "${username}"
 unit = "ocserv"
-expiration_days = 3650
+expiration_days = -1
 signing_key
 tls_www_client
 _EOF_
@@ -101,7 +101,7 @@ function ConfigOcserv {
     #复制证书文件
     cp ./server-cert.pem /etc/pki/ocserv/public/server.crt
     cp ./server-key.pem /etc/pki/ocserv/private/server.key
-    cp ./ca-cert.pem ${confdir}/ca.pem
+    cp ./ca-cert.pem /etc/pki/ocserv/cacerts/ca.pem
     cp ./user.p12 ${htmldir}/user.p12.bak
     #添加用户和密码
     (echo "${password}"; sleep 1; echo "${password}") | ocpasswd -c "${confdir}/ocpasswd" ${username}
@@ -109,10 +109,8 @@ function ConfigOcserv {
     cp ${confdir}/ocserv.conf ${confdir}/ocserv.conf.bak
     sed -i 's@auth = "pam"@#auth = "pam"\nauth = "plain[passwd=/etc/ocserv/ocpasswd]"@g' "${confdir}/ocserv.conf"
     sed -i 's@#enable-auth = "certificate"@enable-auth = "certificate"@g' "${confdir}/ocserv.conf"
-    sed -i 's@#ca-cert = /etc/ocserv/ca.pem@ca-cert = /etc/ocserv/ca.pem@g' "${confdir}/ocserv.conf"
+    sed -i 's@#ca-cert = /etc/ocserv/ca.pem@ca-cert = /etc/pki/ocserv/cacerts/ca.pem@g' "${confdir}/ocserv.conf"
     sed -i "s/default-domain = example.com/default-domain = conncet.785118406.xyz/g" "${confdir}/ocserv.conf"
-    sed -i "s/max-same-clients = 2/max-same-clients = 8/g" "${confdir}/ocserv.conf"
-    sed -i "s/max-clients = 16/max-clients = 64/g" "${confdir}/ocserv.conf"
     sed -i "s/tcp-port = 443/tcp-port = ${port}/g" "${confdir}/ocserv.conf"
     sed -i "s/udp-port = 443/udp-port = ${port}/g" "${confdir}/ocserv.conf"
     sed -i "s@#ipv4-network = 192.168.1.0/24@ipv4-network = 172.16.8.0/24@g" "${confdir}/ocserv.conf"

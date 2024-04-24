@@ -38,11 +38,13 @@ function ConfigEnvironment {
 #########################################
 function InstallOcserv {
     #升级系统
-    #dnf update -y -q
+    dnf update -y -q
     #安装 epel-release
-    dnf install -y -q epel-release && dnf clean all && dnf makecache
+    dnf install -y -q epel-release
+    dnf clean all
+    dnf makecache
     #安装ocserv
-    dnf install -y ocserv gnutls-utils nginx
+    dnf install -y -q ocserv gnutls-utils nginx
 }
 #########################################
 function InstallCert {

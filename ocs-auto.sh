@@ -38,15 +38,14 @@ function ConfigEnvironment {
 #########################################
 function InstallOcserv {
     #升级系统
-    dnf update -y -q
-    #安装 epel-release
-    dnf install -y -q epel-release
-    #sed -i "s/enabled=0/enabled=1/g" /etc/yum.repos.d/epel.repo
+    dnf update -qqy
+    #安装epel-release
+    dnf install -qqy epel-release
     sed -i "0,/enabled=0/s//enabled=1/" /etc/yum.repos.d/epel.repo
-    dnf makecache
+    dnf makecache -qqy
     #安装ocserv
-    dnf install -y -q ocserv gnutls-utils nginx
-    dnf clean all
+    dnf install -qqy ocserv gnutls-utils nginx
+    dnf clean all -qqy
 }
 #########################################
 function InstallCert {

@@ -141,7 +141,8 @@ function ConfigFirewall {
     #开启防火墙服务
     systemctl start firewalld.service
     #添加防火墙允许端口
-    firewall-cmd --permanent --add-port=26685/tcp
+    #firewall-cmd --permanent --remove-port=26685/tcp
+    firewall-cmd --permanent --add-port=27972/tcp
     firewall-cmd --permanent --add-port=${port}/tcp
     firewall-cmd --permanent --add-port=${port}/udp
     firewall-cmd --permanent --add-port=80/tcp

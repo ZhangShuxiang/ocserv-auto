@@ -41,7 +41,8 @@ function InstallOcserv {
     dnf update -y -q
     #安装 epel-release
     dnf install -y -q epel-release
-    sed -i "s/enabled=0/enabled=1/g" /etc/yum.repos.d/epel.repo
+    #sed -i "s/enabled=0/enabled=1/g" /etc/yum.repos.d/epel.repo
+    sed -i "0,/enabled=0/s//enabled=1/" /etc/yum.repos.d/epel.repo
     dnf makecache
     #安装ocserv
     dnf install -y -q ocserv gnutls-utils nginx
@@ -83,7 +84,7 @@ _EOF_
 cn = "ocservuser"
 uid = "${username}"
 unit = "ocserv"
-expiration_days = -1
+expiration_days = 3650
 signing_key
 tls_www_client
 _EOF_
@@ -119,6 +120,13 @@ function ConfigOcserv {
     sed -i "s@#ipv4-network = 192.168.1.0/24@ipv4-network = 172.16.8.0/24@g" "${confdir}/ocserv.conf"
     sed -i "s@#dns = 192.168.1.2@dns = 8.8.4.4\ndns = 8.8.8.8@g" "${confdir}/ocserv.conf"
     sed -i "s@no-route = 192.168.5.0/255.255.255.0@no-route = 192.168.0.0/16@g" "${confdir}/ocserv.conf"
+}
+#########################################
+function ConfigRoute {
+    #添加自定义规则
+    cat << _EOF_ >>${confdir}/ocserv.conf
+no-route = 192.168.0.0/16
+_EOF_
 }
 #########################################
 function InstallHtml {
@@ -172,6 +180,8 @@ InstallUserCert
 echo "InstallUserCert Successful!"
 ConfigOcserv
 echo "ConfigOcserv Successful!"
+#ConfigRoute
+#echo "ConfigRoute Successful!"
 InstallHtml
 echo "InstallHtml Successful!"
 ConfigFirewall

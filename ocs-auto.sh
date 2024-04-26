@@ -65,7 +65,7 @@ _EOF_
     certtool --generate-privkey --outfile server-key.pem
     cat << _EOF_ >server.tmpl
 cn = "Gov Server"
-dns_name = "785118406.xyz"
+dns_name = "abc.785118406.xyz"
 organization = "Government"
 expiration_days = -1
 signing_key
@@ -111,7 +111,7 @@ function ConfigOcserv {
     sed -i 's@auth = "pam"@#auth = "pam"\nauth = "plain[passwd=/etc/ocserv/ocpasswd]"@g' "${confdir}/ocserv.conf"
     sed -i 's@#enable-auth = "certificate"@enable-auth = "certificate"@g' "${confdir}/ocserv.conf"
     sed -i 's@#ca-cert = /etc/ocserv/ca.pem@ca-cert = /etc/pki/ocserv/cacerts/ca.pem@g' "${confdir}/ocserv.conf"
-    sed -i "s/example.com/785118406.xyz/g" "${confdir}/ocserv.conf"
+    sed -i "s/example.com/abc.785118406.xyz/g" "${confdir}/ocserv.conf"
     sed -i "s@#ipv4-network = 192.168.1.0/24@ipv4-network = 172.16.8.0/24@g" "${confdir}/ocserv.conf"
     sed -i "s@#dns = 192.168.1.2@dns = 8.8.4.4\ndns = 8.8.8.8@g" "${confdir}/ocserv.conf"
     sed -i "s@no-route = 192.168.5.0/255.255.255.0@no-route = 192.168.0.0/16@g" "${confdir}/ocserv.conf"
@@ -145,8 +145,8 @@ function ConfigFirewall {
     systemctl -q start firewalld.service
     #添加防火墙允许端口--add-port--remove-port
     firewall-cmd -q --permanent --add-port=27972/tcp
-    firewall-cmd -q --permanent --add-port=${port}/tcp
-    firewall-cmd -q --permanent --add-port=${port}/udp
+    firewall-cmd -q --permanent --add-port=443/tcp
+    firewall-cmd -q --permanent --add-port=443/udp
     firewall-cmd -q --permanent --add-port=80/tcp
     #开启伪装IP
     firewall-cmd -q --permanent --add-masquerade

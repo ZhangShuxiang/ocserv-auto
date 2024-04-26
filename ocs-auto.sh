@@ -50,7 +50,7 @@ function InstallCert {
     #创建证书（参考https://ocserv.openconnect-vpn.net/ocserv.8.html）
     certtool --generate-privkey --outfile ca-key.pem
     cat << _EOF_ >ca.tmpl
-cn = "Government CA"
+cn = "GovernmentCA"
 organization = "Government"
 serial = 1
 expiration_days = -1
@@ -64,7 +64,8 @@ _EOF_
 #---------------------------------------#
     certtool --generate-privkey --outfile server-key.pem
     cat << _EOF_ >server.tmpl
-cn = "Gov Server"
+cn = "GovServer"
+dns_name = "785118406.xyz"
 dns_name = "abc.785118406.xyz"
 organization = "Government"
 expiration_days = -1
@@ -78,10 +79,8 @@ _EOF_
 #---------------------------------------#
     certtool --generate-privkey --outfile user-key.pem
     cat << _EOF_ >user.tmpl
-cn = "Gov User"
-organization = "Government"
-uid = "${username}"
-expiration_days = 3650
+dn = "cn=GovUser,O=Government,UID=${username}"
+expiration_days = -1
 signing_key
 tls_www_client
 _EOF_

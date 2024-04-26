@@ -49,11 +49,11 @@ function InstallOcserv {
 }
 #########################################
 function InstallCert {
-    #创建证书（参考http://www.infradead.org/ocserv/manual.html#heading5）
+    #创建证书（参考https://ocserv.openconnect-vpn.net/ocserv.8.html）
     certtool --generate-privkey --outfile ca-key.pem
     cat << _EOF_ >ca.tmpl
-cn = "ocservca"
-organization = "ocserv"
+cn = "Government CA"
+organization = "Government"
 serial = 1
 expiration_days = -1
 ca
@@ -66,12 +66,12 @@ _EOF_
 #---------------------------------------#
     certtool --generate-privkey --outfile server-key.pem
     cat << _EOF_ >server.tmpl
-cn = "ocservserver"
-dns_name = "conncet.785118406.xyz"
-organization = "ocserv"
+cn = "Gov Server"
+dns_name = "785118406.xyz"
+organization = "Government"
 expiration_days = -1
 signing_key
-encryption_key #only if the generated key is an RSA one
+encryption_key
 tls_www_server
 _EOF_
     certtool --generate-certificate --load-privkey server-key.pem \
@@ -80,9 +80,9 @@ _EOF_
 #---------------------------------------#
     certtool --generate-privkey --outfile user-key.pem
     cat << _EOF_ >user.tmpl
-cn = "ocservuser"
+cn = "Gov User"
+organization = "Government"
 uid = "${username}"
-unit = "ocserv"
 expiration_days = 3650
 signing_key
 tls_www_client

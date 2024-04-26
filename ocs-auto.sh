@@ -3,21 +3,10 @@ basepath=$(dirname $0)
 cd ${basepath}&&mkdir ocsauto&&cd ocsauto
 #########################################
 function ConfigEnvironment {
-    #变量设置
     #配置目录
     confdir="/etc/ocserv"
     htmldir="/usr/share/nginx/html"
-    #端口，默认是443
-    port=443
-    #用户名，默认是adminuser
-    username=adminuser
-    echo -e "\nPlease input ocserv user name."
-    printf "Default user name is \e[33m${username}\e[0m, let it blank to use this user name: "
-    read usernametmp
-    if [[ -n "${usernametmp}" ]]; then
-        username=${usernametmp}
-    fi
-    #随机密码
+    #随机字符串
     randstr() {
         index=0
         str=""
@@ -27,6 +16,15 @@ function ConfigEnvironment {
         for i in {1..10}; do str="$str${arr[$RANDOM%$index]}"; done
         echo ${str}
     }
+    #用户名，默认随机
+    username=$(randstr)
+    echo -e "\nPlease input ocserv user name."
+    printf "Default user name is \e[33m${username}\e[0m, let it blank to use this user name: "
+    read usernametmp
+    if [[ -n "${usernametmp}" ]]; then
+        username=${usernametmp}
+    fi
+    #密码，默认随机
     password=$(randstr)
     printf "\nPlease input \e[33m${username}\e[0m's password.\n"
     printf "Random password is \e[33m${password}\e[0m, let it blank to use this password: "
@@ -113,9 +111,7 @@ function ConfigOcserv {
     sed -i 's@auth = "pam"@#auth = "pam"\nauth = "plain[passwd=/etc/ocserv/ocpasswd]"@g' "${confdir}/ocserv.conf"
     sed -i 's@#enable-auth = "certificate"@enable-auth = "certificate"@g' "${confdir}/ocserv.conf"
     sed -i 's@#ca-cert = /etc/ocserv/ca.pem@ca-cert = /etc/pki/ocserv/cacerts/ca.pem@g' "${confdir}/ocserv.conf"
-    sed -i "s/default-domain = example.com/default-domain = 785118406.xyz/g" "${confdir}/ocserv.conf"
-    sed -i "s/tcp-port = 443/tcp-port = ${port}/g" "${confdir}/ocserv.conf"
-    sed -i "s/udp-port = 443/udp-port = ${port}/g" "${confdir}/ocserv.conf"
+    sed -i "s/example.com/785118406.xyz/g" "${confdir}/ocserv.conf"
     sed -i "s@#ipv4-network = 192.168.1.0/24@ipv4-network = 172.16.8.0/24@g" "${confdir}/ocserv.conf"
     sed -i "s@#dns = 192.168.1.2@dns = 8.8.4.4\ndns = 8.8.8.8@g" "${confdir}/ocserv.conf"
     sed -i "s@no-route = 192.168.5.0/255.255.255.0@no-route = 192.168.0.0/16@g" "${confdir}/ocserv.conf"
@@ -146,27 +142,26 @@ _EOF_
 #########################################
 function ConfigFirewall {
     #开启防火墙服务
-    systemctl start firewalld.service
-    #添加防火墙允许端口
-    #firewall-cmd --permanent --remove-port=26685/tcp
-    firewall-cmd --permanent --add-port=27972/tcp
-    firewall-cmd --permanent --add-port=${port}/tcp
-    firewall-cmd --permanent --add-port=${port}/udp
-    firewall-cmd --permanent --add-port=80/tcp
+    systemctl -q start firewalld.service
+    #添加防火墙允许端口--add-port--remove-port
+    firewall-cmd -q --permanent --add-port=27972/tcp
+    firewall-cmd -q --permanent --add-port=${port}/tcp
+    firewall-cmd -q --permanent --add-port=${port}/udp
+    firewall-cmd -q --permanent --add-port=80/tcp
     #开启伪装IP
-    firewall-cmd --permanent --add-masquerade
+    firewall-cmd -q --permanent --add-masquerade
     #重新加载防火墙
-    firewall-cmd --reload
+    firewall-cmd -q --reload
 }
 #########################################
 function ConfigSystem {
     #添加开机启动
-    systemctl enable firewalld.service
-    systemctl enable ocserv.service
-    systemctl enable nginx.service
+    systemctl -q enable firewalld.service
+    systemctl -q enable ocserv.service
+    systemctl -q enable nginx.service
     #开启服务
-    systemctl start ocserv.service
-    systemctl start nginx.service
+    systemctl -q start ocserv.service
+    systemctl -q start nginx.service
 }
 #########################################
 ConfigEnvironment

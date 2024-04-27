@@ -79,7 +79,7 @@ _EOF_
 #---------------------------------------#
     certtool --generate-privkey --outfile user-key.pem
     cat << _EOF_ >user.tmpl
-dn = "cn=GovUser,O=Government,UID=${username}"
+dn = "cn=GovUser,O=Government,UID=${username},OU=ocserv"
 expiration_days = -1
 signing_key
 tls_www_client

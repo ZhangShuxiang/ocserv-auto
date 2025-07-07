@@ -123,7 +123,10 @@ function ConfigOcserv {
     sed -i 's@#ca-cert = /etc/ocserv/ca.pem@ca-cert = /etc/pki/ocserv/cacerts/ca.pem@g' "${confdir}/ocserv.conf"
     sed -i "s/example.com/abc.785118406.xyz/g" "${confdir}/ocserv.conf"
     sed -i "s@#ipv4-network = 192.168.1.0/24@ipv4-network = 172.16.8.0/24@g" "${confdir}/ocserv.conf"
-    sed -i "s@#dns = 192.168.1.2@dns = 8.8.4.4\ndns = 8.8.8.8@g" "${confdir}/ocserv.conf"
+    sed -i "s@#ipv6-network = fda9:4efe:7e3b:03ea::/48@ipv6-network = fd17:2168::/48@g" "${confdir}/ocserv.conf"
+    sed -i "s@#ipv6-subnet-prefix = 64@ipv6-subnet-prefix = 64@g" "${confdir}/ocserv.conf"
+    sed -i "s@#dns = 192.168.1.2@dns = 8.8.8.8\ndns = 8.8.4.4@g" "${confdir}/ocserv.conf"
+    sed -i "s@# dns = fc00::4be0@dns = 2001:4860:4860::8888\ndns = 2001:4860:4860::8844@g" "${confdir}/ocserv.conf"
     sed -i "s@no-route = 192.168.5.0/255.255.255.0@no-route = 192.168.0.0/16@g" "${confdir}/ocserv.conf"
 }
 #########################################
@@ -160,6 +163,7 @@ function ConfigFirewall {
     firewall-cmd -q --permanent --add-port=80/tcp
     #开启伪装IP
     firewall-cmd -q --permanent --add-masquerade
+    firewall-cmd -q --permanent --add-rich-rule='rule family=ipv6 masquerade'
     #重新加载防火墙
     firewall-cmd -q --reload
 }

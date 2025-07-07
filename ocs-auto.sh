@@ -116,6 +116,10 @@ function ConfigOcserv {
     cp ./user.p12 ${htmldir}/user.p12.bak
     #添加用户和密码
     (echo "${password}"; sleep 1; echo "${password}") | ocpasswd -c "${confdir}/ocpasswd" ${username}
+    #编辑系统文件
+    sed -i '$a\nnet.ipv4.ip_forward=1\nnet.ipv6.conf.all.forwarding=1' /etc/sysctl.conf
+    sed -i '$a\nipv6_forwarding=yes' /etc/firewalld/firewalld.conf
+    sysctl -p
     #编辑配置文件
     cp ${confdir}/ocserv.conf ${confdir}/ocserv.conf.bak
     sed -i 's@auth = "pam"@#auth = "pam"\nauth = "plain[passwd=/etc/ocserv/ocpasswd]"@g' "${confdir}/ocserv.conf"

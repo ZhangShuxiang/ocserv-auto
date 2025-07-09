@@ -35,10 +35,10 @@ function ConfigEnvironment {
     #端口
     echo -n "ocs port: "
     read porttmp1
-    add-port1=${porttmp1}
+    aadd-port1=${porttmp1}
     echo -n "ssh port: "
     read porttmp2
-    add-port2=${porttmp2}
+    aadd-port2=${porttmp2}
     #域名
     echo -n "www."
     read wwwtmp1
@@ -53,7 +53,7 @@ function InstallOcserv {
     #sed -i "0,/enabled=0/s//enabled=1/" /etc/yum.repos.d/epel.repo
     dnf makecache -qqy
     #安装ocserv
-    dnf install -qqy ocserv gnutls-utils nginx
+    dnf install -qqy ocserv gnutls-utils nginx certbot
     dnf clean all -qqy
 }
 #########################################
@@ -108,6 +108,10 @@ function InstallUserCert {
     --outfile user.p12 --outder
 }
 #########################################
+#certbot certonly  -d example.com --manual --preferred-challenges dns --server https://acme-v02.api.letsencrypt.org/directory
+#crontab -u root -e
+#0 2 1 * * certbot renew --quiet
+#########################################
 function ConfigOcserv {
     #复制证书文件
     cp ./server-cert.pem /etc/pki/ocserv/public/server.crt
@@ -116,22 +120,23 @@ function ConfigOcserv {
     cp ./user.p12 ${htmldir}/user.p12.bak
     #添加用户和密码
     (echo "${password}"; sleep 1; echo "${password}") | ocpasswd -c "${confdir}/ocpasswd" ${username}
-    #编辑系统文件
-    sed -i '$a\nnet.ipv4.ip_forward=1\nnet.ipv6.conf.all.forwarding=1' /etc/sysctl.conf
-    sed -i '$a\nipv6_forwarding=yes' /etc/firewalld/firewalld.conf
-    sysctl -p
     #编辑配置文件
     cp ${confdir}/ocserv.conf ${confdir}/ocserv.conf.bak
     sed -i 's@auth = "pam"@#auth = "pam"\nauth = "plain[passwd=/etc/ocserv/ocpasswd]"@g' "${confdir}/ocserv.conf"
     sed -i 's@#enable-auth = "certificate"@enable-auth = "certificate"@g' "${confdir}/ocserv.conf"
     sed -i 's@#ca-cert = /etc/ocserv/ca.pem@ca-cert = /etc/pki/ocserv/cacerts/ca.pem@g' "${confdir}/ocserv.conf"
-    sed -i "s/example.com/abc.785118406.xyz/g" "${confdir}/ocserv.conf"
+    sed -i "s/example.com/${wwwtmp}/g" "${confdir}/ocserv.conf"
+    #sed -i "s@device = vpns@device = vpns@g" "${confdir}/ocserv.conf"
     sed -i "s@#ipv4-network = 192.168.1.0/24@ipv4-network = 172.16.8.0/24@g" "${confdir}/ocserv.conf"
     sed -i "s@#ipv6-network = fda9:4efe:7e3b:03ea::/48@ipv6-network = fd17:2168::/48@g" "${confdir}/ocserv.conf"
-    sed -i "s@#ipv6-subnet-prefix = 64@ipv6-subnet-prefix = 64@g" "${confdir}/ocserv.conf"
+    sed -i "s@#ipv6-subnet-prefix = 64@ipv6-subnet-prefix = 80@g" "${confdir}/ocserv.conf"
+    sed -i "s@#tunnel-all-dns = true@tunnel-all-dns = true@g" "${confdir}/ocserv.conf"
     sed -i "s@#dns = 192.168.1.2@dns = 8.8.8.8\ndns = 8.8.4.4@g" "${confdir}/ocserv.conf"
     sed -i "s@# dns = fc00::4be0@dns = 2001:4860:4860::8888\ndns = 2001:4860:4860::8844@g" "${confdir}/ocserv.conf"
     sed -i "s@no-route = 192.168.5.0/255.255.255.0@no-route = 192.168.0.0/16@g" "${confdir}/ocserv.conf"
+    #sed -i "s@camouflage = false@camouflage = true@g" "${confdir}/ocserv.conf"
+    #sed -i 's@camouflage_secret = "mysecretkey"@camouflage_secret = "mysecretkey"@g' "${confdir}/ocserv.conf"
+    #sed -i 's@camouflage_realm = "Restricted Content"@#camouflage_realm = "Restricted Content"@g' "${confdir}/ocserv.conf"
 }
 #########################################
 function ConfigRoute {
@@ -158,12 +163,15 @@ _EOF_
 }
 #########################################
 function ConfigFirewall {
+    #编辑系统文件
+    sysctl -w net.ipv4.ip_forward=1 >> /etc/sysctl.conf
+    sysctl -w net.ipv6.conf.all.forwarding=1 >> /etc/sysctl.conf
     #开启防火墙服务
     systemctl -q start firewalld.service
     #添加防火墙允许端口--add-port--remove-port
-    firewall-cmd -q --permanent --add-port=${add-port2}/tcp
-    firewall-cmd -q --permanent --add-port=${add-port1}/tcp
-    firewall-cmd -q --permanent --add-port=${add-port1}/udp
+    firewall-cmd -q --permanent --add-port=${aadd-port2}/tcp
+    firewall-cmd -q --permanent --add-port=${aadd-port1}/tcp
+    firewall-cmd -q --permanent --add-port=${aadd-port1}/udp
     firewall-cmd -q --permanent --add-port=80/tcp
     #开启伪装IP
     firewall-cmd -q --permanent --add-masquerade

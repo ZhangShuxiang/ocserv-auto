@@ -1,0 +1,7 @@
+#!ipxe
+dhcp
+kernel http://${next-server}/chfs/shared/windows/boot/wimboot?v=1 quiet
+initrd http://${next-server}/chfs/shared/windows/boot/boot.sdi?v=1 boot.sdi
+initrd http://${next-server}/chfs/shared/windows/boot/bcd?v=1 bcd
+initrd http://${next-server}/chfs/shared/windows/sources/boot.wim?v=1 boot.wim
+boot

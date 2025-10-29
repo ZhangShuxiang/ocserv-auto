@@ -1,0 +1,101 @@
+@echo off
+setlocal enabledelayedexpansion
+
+echo ===============================================
+echo    Windows自动安装脚本 - WinPE环境
+echo ===============================================
+
+timeout /t 60 /nobreak
+
+REM 第一步：磁盘分区
+echo 正在重新分区磁盘...
+(
+echo select disk 0
+echo clean
+echo convert gpt
+echo create partition efi size=600
+echo format quick fs=fat32 label="System"
+echo assign letter="S"
+echo create partition msr size=16
+echo create partition primary size=102400
+echo format quick fs=ntfs label="Windows"
+echo assign letter="C"
+echo create partition primary
+echo format quick fs=ntfs label="Data"
+echo assign letter="D"
+echo exit
+)|diskpart
+
+if %errorlevel% neq 0 (
+    echo 错误：磁盘分区失败！
+    pause
+    exit /b 1
+)
+echo 磁盘分区完成！
+
+REM 第二步：使用aria2c下载镜像文件
+echo 正在下载Windows镜像文件...
+
+REM 设置下载参数
+set "aria2_options=-x 16 -s 16 -k 1M --check-certificate=false"
+set "download_url=http://172.16.1.1/chfs/shared/install.wim
+set "output_dir=D:\
+set "output_name=windows.wim"
+set "output_file=%output_dir%%output_name%"
+
+REM 下载镜像文件
+echo 开始下载：%download_url%
+aria2c %aria2_options% %download_url% -d %output_dir% -o %output_name%
+
+if %errorlevel% neq 0 (
+    echo 错误：镜像下载失败！
+    pause
+    exit /b 1
+)
+echo 镜像下载完成！
+
+REM 第三步：验证下载的WIM文件
+echo 正在验证WIM文件...
+dism /get-imageinfo /imagefile:"%output_file%"
+
+if %errorlevel% neq 0 (
+    echo 错误：WIM文件损坏或无效！
+    pause
+    exit /b 1
+)
+echo WIM文件验证通过！
+
+REM 第四步：释放系统镜像
+echo 正在释放系统镜像到C盘...
+dism /apply-image /imagefile:"%output_file%" /index:3 /applydir:C:\
+
+if %errorlevel% neq 0 (
+    echo 错误：系统镜像释放失败！
+    pause
+    exit /b 1
+)
+echo 系统镜像释放完成！
+
+REM 第五步：设置引导文件
+echo 正在设置引导文件...
+bcdboot C:\Windows /s S: /f ALL
+
+if %errorlevel% neq 0 (
+    echo 错误：引导设置失败！
+    pause
+    exit /b 1
+)
+echo 引导设置完成！
+
+REM 可选：清理下载的镜像文件以节省空间
+echo 是否删除下载的镜像文件？(y/n)
+set /p choice=
+if /i "!choice!"=="y" (
+    del "%output_file%"
+    echo 镜像文件已删除。
+)
+
+echo ===============================================
+echo   系统安装完成！请重启计算机
+echo ===============================================
+pause

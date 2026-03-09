@@ -114,25 +114,31 @@ function ConfigOcserv {
     cp ./server-key.pem /etc/pki/ocserv/private/server.key
     cp ./ca-cert.pem /etc/ocserv/ca.pem
     cp ./user.p12 ${htmldir}/user.p12.bak
+    #添加用户和密码
+    (echo "${password}"; sleep 1; echo "${password}") | ocpasswd -c "${confdir}/ocpasswd" ${username}
     #编辑配置文件
     cp ${confdir}/ocserv.conf ${confdir}/ocserv.conf.bak
     sed -i 's@^auth\s@#auth\s@g' "${confdir}/ocserv.conf"
+    sed -i 's@[passwd=./sample.passwd,otp=./sample.otp]@[passwd=/etc/ocserv/ocpasswd]"@g' "${confdir}/ocserv.conf"
     sed -i 's@#auth = "certificate"@auth = "certificate"@g' "${confdir}/ocserv.conf"
+    sed -i 's@#enable-auth = "certificate"@enable-auth = "certificate"@g' "${confdir}/ocserv.conf"
     sed -i 's@#ca-cert@ca-cert@g' "${confdir}/ocserv.conf"
-    sed -i "s@device = vpns@device = ocservtun@g" "${confdir}/ocserv.conf"
     sed -i "s@example.com@abc.${wwwtmp}@g" "${confdir}/ocserv.conf"
-    sed -i "s@^no-route\s@#no-route\s@g" "${confdir}/ocserv.conf"
+    sed -i "s@device = vpns@device = ocstun@g" "${confdir}/ocserv.conf"
+    sed -i "s@#ipv4-network = 192.168.1.0/24@ipv4-network = 172.16.8.0/24@g" "${confdir}/ocserv.conf"
+    sed -i "s@#ipv6-network = fda9:4efe:7e3b:03ea::/48@ipv6-network = fd17:2168::/48@g" "${confdir}/ocserv.conf"
+    sed -i "s@#ipv6-subnet-prefix = 64@ipv6-subnet-prefix = 64@g" "${confdir}/ocserv.conf"
+    sed -i "s@#tunnel-all-dns@tunnel-all-dns@g" "${confdir}/ocserv.conf"
+    sed -i "s@#dns = 192.168.1.2@dns = 8.8.8.8\ndns = 2001:4860:4860::8888@g" "${confdir}/ocserv.conf"
+    sed -i "s@no-route = 192.168.5.0/255.255.255.0@no-route = 192.168.0.0/16@g" "${confdir}/ocserv.conf"
+    sed -i "s@camouflage = false@camouflage = true@g" "${confdir}/ocserv.conf"
+    sed -i 's@mysecretkey@${username}@g' "${confdir}/ocserv.conf"
+    sed -i 's@^camouflage_realm@#camouflage_realm@g' "${confdir}/ocserv.conf"
 }
 #########################################
 function ConfigRoute {
     #添加自定义规则
     cat << _EOF_ >>${confdir}/ocserv.conf
-ipv4-network = 172.16.8.0/24
-ipv6-network = fd17:2168::/48
-ipv6-subnet-prefix = 128
-tunnel-all-dns = true
-dns = 8.8.8.8
-dns = 2001:4860:4860::8888
 no-route = 192.168.0.0/16
 _EOF_
 }
@@ -191,7 +197,7 @@ InstallUserCert
 echo "InstallUserCert Successful!"
 ConfigOcserv
 echo "ConfigOcserv Successful!"
-ConfigRoute
+#ConfigRoute
 #echo "ConfigRoute Successful!"
 InstallHtml
 echo "InstallHtml Successful!"

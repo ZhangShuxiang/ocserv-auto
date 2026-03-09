@@ -119,7 +119,7 @@ function ConfigOcserv {
     #编辑配置文件
     cp ${confdir}/ocserv.conf ${confdir}/ocserv.conf.bak
     sed -i 's@^auth\s@#auth\s@g' "${confdir}/ocserv.conf"
-    sed -i 's@[passwd=./sample.passwd,otp=./sample.otp]@[passwd=/etc/ocserv/ocpasswd]"@g' "${confdir}/ocserv.conf"
+    sed -i 's@passwd=./sample.passwd,otp=./sample.otp@passwd=/etc/ocserv/ocpasswd"@g' "${confdir}/ocserv.conf"
     sed -i 's@#auth = "certificate"@auth = "certificate"@g' "${confdir}/ocserv.conf"
     sed -i 's@#enable-auth = "certificate"@enable-auth = "certificate"@g' "${confdir}/ocserv.conf"
     sed -i 's@#ca-cert@ca-cert@g' "${confdir}/ocserv.conf"

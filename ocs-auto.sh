@@ -13,7 +13,7 @@ function ConfigEnvironment {
         for i in {a..z}; do arr[index]=$i; index=$(expr ${index} + 1); done
         for i in {A..Z}; do arr[index]=$i; index=$(expr ${index} + 1); done
         for i in {0..9}; do arr[index]=$i; index=$(expr ${index} + 1); done
-        for i in {1..10}; do str="$str${arr[$RANDOM%$index]}"; done
+        for i in {1..16}; do str="$str${arr[$RANDOM%$index]}"; done
         echo ${str}
     }
     #用户名，默认随机
@@ -108,28 +108,26 @@ function InstallUserCert {
     --outfile user.p12 --outder
 }
 #########################################
-#certbot certonly  -d example.com --manual --preferred-challenges dns --server https://acme-v02.api.letsencrypt.org/directory
-#crontab -u root -e
-#0 2 1 * * certbot renew --quiet
-#########################################
 function ConfigOcserv {
     #复制证书文件
     cp ./server-cert.pem /etc/pki/ocserv/public/server.crt
     cp ./server-key.pem /etc/pki/ocserv/private/server.key
-    cp ./ca-cert.pem /etc/pki/ocserv/cacerts/ca.pem
+    cp ./ca-cert.pem /etc/ocserv/ca.pem
     cp ./user.p12 ${htmldir}/user.p12.bak
     #添加用户和密码
     (echo "${password}"; sleep 1; echo "${password}") | ocpasswd -c "${confdir}/ocpasswd" ${username}
     #编辑配置文件
     cp ${confdir}/ocserv.conf ${confdir}/ocserv.conf.bak
-    sed -i 's@auth = "pam"@#auth = "pam"\nauth = "plain[passwd=/etc/ocserv/ocpasswd]"@g' "${confdir}/ocserv.conf"
+    sed -i 's@^auth\s@#auth\s@g' "${confdir}/ocserv.conf"
+    sed -i 's@[passwd=./sample.passwd,otp=./sample.otp]@[passwd=/etc/ocserv/ocpasswd]"@g' "${confdir}/ocserv.conf"
+    sed -i 's@#auth = "certificate"@auth = "certificate"@g' "${confdir}/ocserv.conf"
     sed -i 's@#enable-auth = "certificate"@enable-auth = "certificate"@g' "${confdir}/ocserv.conf"
-    sed -i 's@#ca-cert = /etc/ocserv/ca.pem@ca-cert = /etc/pki/ocserv/cacerts/ca.pem@g' "${confdir}/ocserv.conf"
-    sed -i "s/example.com/${wwwtmp}/g" "${confdir}/ocserv.conf"
-    #sed -i "s@device = vpns@device = vpns@g" "${confdir}/ocserv.conf"
+    sed -i 's@#ca-cert@ca-cert@g' "${confdir}/ocserv.conf"
+    sed -i "s@example.com@abc.${wwwtmp}@g" "${confdir}/ocserv.conf"
+    sed -i "s@device = vpns@device = ocservtun@g" "${confdir}/ocserv.conf"
     sed -i "s@#ipv4-network = 192.168.1.0/24@ipv4-network = 172.16.8.0/24@g" "${confdir}/ocserv.conf"
     sed -i "s@#ipv6-network = fda9:4efe:7e3b:03ea::/48@ipv6-network = fd17:2168::/48@g" "${confdir}/ocserv.conf"
-    sed -i "s@#ipv6-subnet-prefix = 64@ipv6-subnet-prefix = 80@g" "${confdir}/ocserv.conf"
+    sed -i "s@#ipv6-subnet-prefix = 64@ipv6-subnet-prefix = 64@g" "${confdir}/ocserv.conf"
     sed -i "s@#tunnel-all-dns = true@tunnel-all-dns = true@g" "${confdir}/ocserv.conf"
     sed -i "s@#dns = 192.168.1.2@dns = 8.8.8.8\ndns = 8.8.4.4@g" "${confdir}/ocserv.conf"
     sed -i "s@# dns = fc00::4be0@dns = 2001:4860:4860::8888\ndns = 2001:4860:4860::8844@g" "${confdir}/ocserv.conf"

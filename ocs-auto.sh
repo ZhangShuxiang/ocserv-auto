@@ -147,17 +147,7 @@ _EOF_
 function InstallHtml {
     #添加公益404网页文件
     mv ${htmldir}/index.html ${htmldir}/index.html.bak
-    cat << _EOF_ >${htmldir}/index.html
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="zh-cn">
-  <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-  </head>
-  <body>
-        <script src="//cdn.dnpw.org/404/v1.min.js" maincolor="#F00" jumptime="-1" jumptarget="/" tips="404" error="" charset="utf-8"></script>
-  </body>
-</html>
-_EOF_
+    cat https://raw.githubusercontent.com/ZhangShuxiang/ocserv-auto/refs/heads/main/aichat.html>${htmldir}/index.html
 }
 #########################################
 function ConfigFirewall {

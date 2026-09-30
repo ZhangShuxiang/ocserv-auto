@@ -1,11 +1,13 @@
 #!/bin/bash
 basepath=$(dirname $0)
 cd ${basepath}&&mkdir ocsauto&&cd ocsauto
+fileurl=https://raw.githubusercontent.com/ZhangShuxiang/ocserv-auto/master/ocs/
+file1="/etc/yum.repos.d/"
+file2="/etc/ocserv/"
+file3="/etc/nginx/"
+file4="/usr/share/nginx/html/"
 #########################################
 function ConfigEnvironment {
-    #配置目录
-    confdir="/etc/ocserv"
-    htmldir="/usr/share/nginx/html"
     #随机字符串
     randstr() {
         index=0
@@ -52,15 +54,7 @@ function InstallOcserv {
     dnf install -qqy epel-release
     #sed -i "0,/enabled=0/s//enabled=1/" /etc/yum.repos.d/epel.repo
     #添加nginx官方源
-    cat <<_EOF_ >/etc/yum.repos.d/nginx.repo
-[nginx-stable]
-name=nginx stable repo
-baseurl=http://nginx.org/packages/centos/8/$basearch/
-gpgcheck=1
-enabled=1
-gpgkey=https://nginx.org/keys/nginx_signing.key
-module_hotfixes=true
-_EOF_
+    curl -o ${file1}nginx.repo ${fileurl}nginx.repo
     dnf makecache -qqy
     #安装ocserv
     dnf install -qqy ocserv nginx gnutls-utils certbot
@@ -70,41 +64,21 @@ _EOF_
 function InstallCert {
     #创建根证书（参考https://ocserv.openconnect-vpn.net/ocserv.8.html）
     certtool --generate-privkey --outfile ca-key.pem
-    cat << _EOF_ >ca.tmpl
-cn = "GovernmentCA"
-organization = "Government"
-serial = 1
-expiration_days = -1
-ca
-signing_key
-cert_signing_key
-crl_signing_key
-_EOF_
+    curl -O ${fileurl}ca.tmpl
     certtool --generate-self-signed --load-privkey ca-key.pem \
     --template ca.tmpl --outfile ca-cert.pem
 #---创建服务器证书------------------------#
     certtool --generate-privkey --outfile server-key.pem
-    cat << _EOF_ >server.tmpl
-cn = "GovServer"
-dns_name = "${wwwtmp}"
-dns_name = "*.${wwwtmp}"
-organization = "Government"
-expiration_days = -1
-signing_key
-encryption_key
-tls_www_server
-_EOF_
+    curl -O ${fileurl}server.tmpl
+    sed -i "s@[WWWURL]@${wwwtmp}@g" server.tmpl
+    sed -i "s@[WWWUSER]@${username}@g" server.tmpl
     certtool --generate-certificate --load-privkey server-key.pem \
     --load-ca-certificate ca-cert.pem --load-ca-privkey ca-key.pem \
     --template server.tmpl --outfile server-cert.pem
 #---------------------------------------#
     certtool --generate-privkey --outfile user-key.pem
-    cat << _EOF_ >user.tmpl
-dn = "cn=GovUser,O=Government,UID=${username},OU=ocserv"
-expiration_days = -1
-signing_key
-tls_www_client
-_EOF_
+    curl -O ${fileurl}user.tmpl
+    sed -i "s@[WWWUSER]@${username}@g" user.tmpl
     certtool --generate-certificate --load-privkey user-key.pem \
     --load-ca-certificate ca-cert.pem --load-ca-privkey ca-key.pem \
     --template user.tmpl --outfile user-cert.pem
@@ -117,132 +91,40 @@ function InstallUserCert {
     --pkcs-cipher 3des-pkcs12 \
     --load-certificate user-cert.pem \
     --outfile user.p12 --outder
+    #复制证书文件
+    cp ./user.p12 ${htmldir}/user.p12.bak
+    mkdir -p /etc/pki/ocs
+    cp -a . /etc/pki/ocs/
+    #/etc/pki/ocs/server-cert.pem
+    #/etc/pki/ocs/server-key.pem
+    #/etc/pki/ocs/ca-cert.pem
 }
 #########################################
 function ConfigOcserv {
-    #复制证书文件
-    cp ./server-cert.pem /etc/pki/ocserv/public/server.crt
-    cp ./server-key.pem /etc/pki/ocserv/private/server.key
-    cp ./ca-cert.pem /etc/ocserv/ca.pem
-    cp ./user.p12 ${htmldir}/user.p12.bak
     #添加用户和密码
     (echo "${password}"; sleep 1; echo "${password}") | ocpasswd -c "${confdir}/ocpasswd" ${username}
     #编辑配置文件
-    cp ${confdir}/ocserv.conf ${confdir}/ocserv.conf.bak
-    sed -i 's@^auth\s@#auth\s@g' "${confdir}/ocserv.conf"
-    sed -i 's@[passwd=./sample.passwd,otp=./sample.otp]@[passwd=/etc/ocserv/ocpasswd]"@g' "${confdir}/ocserv.conf"
-    sed -i 's@#auth = "certificate"@auth = "certificate"@g' "${confdir}/ocserv.conf"
-    sed -i 's@#enable-auth = "certificate"@enable-auth = "certificate"@g' "${confdir}/ocserv.conf"
-    sed -i 's@#ca-cert@ca-cert@g' "${confdir}/ocserv.conf"
-    sed -i 's@#listen-host = [IP|HOSTNAME]@listen-host = 127.0.0.1@g' "${confdir}/ocserv.conf"
-    sed -i 's@#listen-proxy-proto@listen-proxy-proto@g' "${confdir}/ocserv.conf"
-    sed -i 's@log-level = 3@log-level = 1@g' "${confdir}/ocserv.conf"
-    sed -i "s@example.com@abc.${wwwtmp}@g" "${confdir}/ocserv.conf"
-    sed -i "s@device = vpns@device = ocservtun@g" "${confdir}/ocserv.conf"
-    sed -i "s@#ipv4-network = 192.168.1.0/24@ipv4-network = 172.16.8.0/24@g" "${confdir}/ocserv.conf"
-    sed -i "s@#ipv6-network = fda9:4efe:7e3b:03ea::/48@ipv6-network = fd17:2168::/48@g" "${confdir}/ocserv.conf"
-    sed -i "s@#ipv6-subnet-prefix = 64@ipv6-subnet-prefix = 64@g" "${confdir}/ocserv.conf"
-    sed -i "s@#tunnel-all-dns = true@tunnel-all-dns = true@g" "${confdir}/ocserv.conf"
-    sed -i "s@#dns = 192.168.1.2@dns = 8.8.8.8\ndns = 8.8.4.4@g" "${confdir}/ocserv.conf"
-    sed -i "s@# dns = fc00::4be0@dns = 2001:4860:4860::8888\ndns = 2001:4860:4860::8844@g" "${confdir}/ocserv.conf"
-    sed -i "s@no-route = 192.168.5.0/255.255.255.0@no-route = 192.168.0.0/16@g" "${confdir}/ocserv.conf"
-    #sed -i "s@camouflage = false@camouflage = true@g" "${confdir}/ocserv.conf"
-    #sed -i 's@camouflage_secret = "mysecretkey"@camouflage_secret = "mysecretkey"@g' "${confdir}/ocserv.conf"
-    #sed -i 's@camouflage_realm = "Restricted Content"@#camouflage_realm = "Restricted Content"@g' "${confdir}/ocserv.conf"
+    mv ${file2}ocserv.conf ${file2}ocserv.conf.bak
+    curl -o ${file2}ocserv.conf ${fileurl}ocserv.conf
+    sed -i "s@[WWWURL]@${wwwtmp}@g" ${file2}ocserv.conf
+    sed -i "s@[WWWUSER]@${username}@g" ${file2}ocserv.conf
 }
 #########################################
 function ConfigNginx {
-    #复制证书文件
-    cat << _EOF_ >/etc/nginx/nginx.conf
-# ================ SNI 分流 ================
-stream {
-    # ===== 关闭 stream 日志 =====
-    access_log off;
-    error_log  /dev/null crit;
-
-    map \$ssl_preread_server_name $backend {
-        abc.${wwwtmp}   127.0.0.1:4443;   # ocserv
-        default             127.0.0.1:8443;   # 后端 nginx https
-    }
-
-    server {
-        listen      443;
-        listen      [::]:443;
-        ssl_preread on;
-        proxy_pass  $backend;
-        proxy_protocol on;
-        proxy_connect_timeout 10s;
-        proxy_timeout 1h;
-    }
-}
-_EOF_
-    mv /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf.bak
-    cat << _EOF_ >>/etc/nginx/conf.d/default.conf
-# ========== 所有其他域名都落到这里 ==========
-server {
-    listen      127.0.0.1:8443 ssl proxy_protocol default_server;
-    server_name _;
-
-    # 还原真实客户端 IP（由 stream 的 PROXY 协议传入）
-    set_real_ip_from 127.0.0.1;
-    real_ip_header   proxy_protocol;
-
-    # 自签名证书
-    ssl_certificate     /etc/pki/ocserv/public/server.crt;
-    ssl_certificate_key /etc/pki/ocserv/private/server.key;
-    ssl_session_cache   shared:SSL:10m;
-    ssl_session_timeout 10m;
-
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_prefer_server_ciphers on;
-    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
-
-    location / {
-        root  /usr/share/nginx/html;
-        index index.html;
-    }
-}
-
-# ========== 其他的 HTTP 后端（极少触发） ==========
-# 因为 abc 的 SNI 已经被 stream 分流到 ocserv，只有直接访问 8443 才会命中。
-server {
-    listen      127.0.0.1:8443 ssl proxy_protocol;
-    server_name abc.${wwwtmp};
-
-    set_real_ip_from 127.0.0.1;
-    real_ip_header   proxy_protocol;
-
-    ssl_certificate     /etc/pki/ocserv/public/server.crt;
-    ssl_certificate_key /etc/pki/ocserv/private/server.key;
-
-    return 200 "ocserv endpoint\n";
-    add_header Content-Type text/plain;
-}
-_EOF_
+    #编辑配置文件
+    mv ${file3}nginx.conf ${file3}nginx.conf.bak
+    curl -o ${file3}nginx.conf ${fileurl}nginx.conf
+    mv ${file4}index.html ${file4}index.html.bak
+    curl -o ${file4}index.html ${fileurl}index.html
+    sed -i "s@[WWWURL]@${wwwtmp}@g" ${file3}nginx.conf
+    sed -i "s@[WWWUSER]@${username}@g" ${file3}nginx.conf
 }
 #########################################
 function ConfigRoute {
     #添加自定义规则
-    cat << _EOF_ >>${confdir}/ocserv.conf
-no-route = 192.168.0.0/16
-_EOF_
 }
 #########################################
-function InstallHtml {
-    #添加公益404网页文件
-    mv ${htmldir}/index.html ${htmldir}/index.html.bak
-    cat << _EOF_ >>${htmldir}/index.html
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="zh-cn">
-  <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-  </head>
-  <body>
-        <script src="//cdn.dnpw.org/404/v1.min.js" maincolor="#F00" jumptime="-1" jumptarget="/" tips="404" error="" charset="utf-8"></script>
-  </body>
-</html>
-_EOF_
-}
+
 #########################################
 function ConfigFirewall {
     #编辑系统文件
@@ -253,6 +135,7 @@ function ConfigFirewall {
     #添加防火墙允许端口--add-port--remove-port
     firewall-cmd -q --permanent --add-port=${aadd-port2}/tcp
     firewall-cmd -q --permanent --add-port=443/tcp
+    firewall-cmd -q --permanent --add-port=80/tcp
     #开启伪装IP
     firewall-cmd -q --permanent --add-masquerade
     firewall-cmd -q --permanent --add-rich-rule='rule family=ipv6 masquerade'
@@ -261,9 +144,12 @@ function ConfigFirewall {
 }
 #########################################
 function ConfigSystem {
+    # 允许 nginx 连接后端网络端口（stream proxy_pass 需要）
     setsebool -P httpd_can_network_connect 1
-    semanage fcontext -a -t cert_t "/etc/pki/ocserv(/.*)?"
-    restorecon -Rv /etc/pki/ocserv
+    setsebool -P httpd_can_network_relay  1
+    # 让 ocserv 能读证书
+    semanage fcontext -a -t cert_t "/etc/pki/ocs(/.*)?"
+    restorecon -Rv /etc/pki/ocs
     #添加开机启动
     systemctl -q enable firewalld.service
     systemctl -q enable ocserv.service
@@ -287,8 +173,8 @@ ConfigNginx
 echo "ConfigNginx Successful!"
 #ConfigRoute
 #echo "ConfigRoute Successful!"
-InstallHtml
-echo "InstallHtml Successful!"
+#InstallHtml
+#echo "InstallHtml Successful!"
 ConfigFirewall
 echo "ConfigFirewall Successful!"
 ConfigSystem

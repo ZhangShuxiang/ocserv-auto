@@ -1,6 +1,6 @@
 #!/bin/bash
 basepath=$(dirname $0)
-cd ${basepath}&&mkdir ocsauto&&cd ocsauto
+cd ${basepath}&&mkdir -p ocsauto&&cd ocsauto
 fileurl=https://raw.githubusercontent.com/ZhangShuxiang/ocserv-auto/master/ocs/
 file1="/etc/yum.repos.d/"
 file2="/etc/ocserv/"
@@ -10,13 +10,7 @@ file4="/usr/share/nginx/html/"
 function ConfigEnvironment {
     #随机字符串
     randstr() {
-        index=0
-        str=""
-        for i in {a..z}; do arr[index]=$i; index=$(expr ${index} + 1); done
-        for i in {A..Z}; do arr[index]=$i; index=$(expr ${index} + 1); done
-        for i in {0..9}; do arr[index]=$i; index=$(expr ${index} + 1); done
-        for i in {1..16}; do str="$str${arr[$RANDOM%$index]}"; done
-        echo ${str}
+        openssl rand -base64 24 | tr -dc 'A-Za-z0-9' | head -c 16
     }
     #用户名，默认随机
     username=$(randstr)
@@ -35,12 +29,12 @@ function ConfigEnvironment {
         password=${passwordtmp}
     fi
     #端口
-    echo -n "ocs port: "
-    read porttmp1
-    aadd-port1=${porttmp1}
+    #echo -n "ocs port: "
+    #read porttmp1
+    #aadd_port1=${porttmp1}
     echo -n "ssh port: "
     read porttmp2
-    aadd-port2=${porttmp2}
+    aadd_port2=${porttmp2}
     #域名
     echo -n "www."
     read wwwtmp1
@@ -70,15 +64,15 @@ function InstallCert {
 #---创建服务器证书------------------------#
     certtool --generate-privkey --outfile server-key.pem
     curl -O ${fileurl}server.tmpl
-    sed -i "s@[WWWURL]@${wwwtmp}@g" server.tmpl
-    sed -i "s@[WWWUSER]@${username}@g" server.tmpl
+    sed -i "s@\[WWWURL\]@${wwwtmp}@g" server.tmpl
+    sed -i "s@\[WWWUSER\]@${username}@g" server.tmpl
     certtool --generate-certificate --load-privkey server-key.pem \
     --load-ca-certificate ca-cert.pem --load-ca-privkey ca-key.pem \
     --template server.tmpl --outfile server-cert.pem
 #---------------------------------------#
     certtool --generate-privkey --outfile user-key.pem
     curl -O ${fileurl}user.tmpl
-    sed -i "s@[WWWUSER]@${username}@g" user.tmpl
+    sed -i "s@\[WWWUSER\]@${username}@g" user.tmpl
     certtool --generate-certificate --load-privkey user-key.pem \
     --load-ca-certificate ca-cert.pem --load-ca-privkey ca-key.pem \
     --template user.tmpl --outfile user-cert.pem
@@ -92,7 +86,7 @@ function InstallUserCert {
     --load-certificate user-cert.pem \
     --outfile user.p12 --outder
     #复制证书文件
-    cp ./user.p12 ${htmldir}/user.p12.bak
+    cp ./user.p12 ${file4}user.p12.bak
     mkdir -p /etc/pki/ocs
     cp -a . /etc/pki/ocs/
     #/etc/pki/ocs/server-cert.pem
@@ -102,12 +96,12 @@ function InstallUserCert {
 #########################################
 function ConfigOcserv {
     #添加用户和密码
-    (echo "${password}"; sleep 1; echo "${password}") | ocpasswd -c "${confdir}/ocpasswd" ${username}
+    (echo "${password}"; sleep 1; echo "${password}") | ocpasswd -c "${file2}ocpasswd" ${username}
     #编辑配置文件
     mv ${file2}ocserv.conf ${file2}ocserv.conf.bak
     curl -o ${file2}ocserv.conf ${fileurl}ocserv.conf
-    sed -i "s@[WWWURL]@${wwwtmp}@g" ${file2}ocserv.conf
-    sed -i "s@[WWWUSER]@${username}@g" ${file2}ocserv.conf
+    sed -i "s@\[WWWURL\]@${wwwtmp}@g" ${file2}ocserv.conf
+    sed -i "s@\[WWWUSER\]@${username}@g" ${file2}ocserv.conf
 }
 #########################################
 function ConfigNginx {
@@ -116,8 +110,8 @@ function ConfigNginx {
     curl -o ${file3}nginx.conf ${fileurl}nginx.conf
     mv ${file4}index.html ${file4}index.html.bak
     curl -o ${file4}index.html ${fileurl}index.html
-    sed -i "s@[WWWURL]@${wwwtmp}@g" ${file3}nginx.conf
-    sed -i "s@[WWWUSER]@${username}@g" ${file3}nginx.conf
+    sed -i "s@\[WWWURL\]@${wwwtmp}@g" ${file3}nginx.conf
+    sed -i "s@\[WWWUSER\]@${username}@g" ${file3}nginx.conf
 }
 #########################################
 function ConfigRoute {
@@ -133,7 +127,7 @@ function ConfigFirewall {
     #开启防火墙服务
     systemctl -q start firewalld.service
     #添加防火墙允许端口--add-port--remove-port
-    firewall-cmd -q --permanent --add-port=${aadd-port2}/tcp
+    firewall-cmd -q --permanent --add-port=${aadd_port2}/tcp
     firewall-cmd -q --permanent --add-port=443/tcp
     firewall-cmd -q --permanent --add-port=80/tcp
     #开启伪装IP

@@ -51,7 +51,7 @@ function InstallOcserv {
     curl -o ${file1}nginx.repo ${fileurl}nginx.repo
     dnf makecache -qqy
     #安装ocserv
-    dnf install -qqy ocserv nginx gnutls-utils certbot
+    dnf install -qqy ocserv nginx gnutls-utils certbot firewalld
     dnf clean all -qqy
 }
 #########################################

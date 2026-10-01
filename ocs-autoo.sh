@@ -80,7 +80,7 @@ function InstallCert {
 #########################################
 function InstallUserCert {
     #导出用户证书
-    (echo "${username}"; sleep 3; echo "${password}"; sleep 3; echo "${password}") | \
+    #(echo "${username}"; sleep 3; echo "${password}"; sleep 3; echo "${password}") | \
     certtool --to-p12 --load-privkey user-key.pem \
     --pkcs-cipher 3des-pkcs12 \
     --load-certificate user-cert.pem \
@@ -121,55 +121,93 @@ function ConfigNginx {
 
 #########################################
 function ConfigFirewall {
-    # ---- 内核参数（用 echo 追加，避免重复） ----
-    grep -q '^net.ipv4.ip_forward=1'                  /etc/sysctl.conf || echo 'net.ipv4.ip_forward=1'                  >> /etc/sysctl.conf
-    grep -q '^net.ipv6.conf.all.forwarding=1'         /etc/sysctl.conf || echo 'net.ipv6.conf.all.forwarding=1'         >> /etc/sysctl.conf
-    grep -q '^net.ipv6.conf.all.accept_ra=2'          /etc/sysctl.conf || echo 'net.ipv6.conf.all.accept_ra=2'          >> /etc/sysctl.conf
-    sysctl --system >/dev/null
+    echo "===== 配置防火墙（适配 6in4 隧道）====="
 
-    # ---- 启动 firewalld ----
+    # ---------- 1. 内核参数 ----------
+    # IPv4 / IPv6 转发
+    grep -q '^net.ipv4.ip_forward=1'          /etc/sysctl.conf || echo 'net.ipv4.ip_forward=1'          >> /etc/sysctl.conf
+    grep -q '^net.ipv6.conf.all.forwarding=1' /etc/sysctl.conf || echo 'net.ipv6.conf.all.forwarding=1' >> /etc/sysctl.conf
+    grep -q '^net.ipv6.conf.all.accept_ra=2'  /etc/sysctl.conf || echo 'net.ipv6.conf.all.accept_ra=2'  >> /etc/sysctl.conf
+    sysctl --system >/dev/null 2>&1
+
+    # ---------- 2. 启动 firewalld ----------
     systemctl -q enable --now firewalld.service
 
-    # ---- IPv4 端口 ----
+    # ---------- 3. 关键：6in4 隧道必须关闭严格 rpfilter ----------
+    # strict 会因隧道非对称路由丢弃入站 IPv6 包
+    sed -i 's/^IPv6_rpfilter=.*/IPv6_rpfilter=loose/' /etc/firewalld/firewalld.conf
+    grep -q '^IPv6_rpfilter=' /etc/firewalld/firewalld.conf || \
+        echo 'IPv6_rpfilter=loose' >> /etc/firewalld/firewalld.conf
+
+    # 重启使 rpfilter 生效
+    systemctl -q restart firewalld.service
+
+    # ---------- 4. 自动探测 6in4 隧道接口并绑定到 public zone ----------
+    TUNNEL_IF=$(ip -o link show | awk -F': ' '{print $2}' | \
+                grep -E '^(sit[0-9]+|ipv6net|6in4[0-9]*|tunnel[0-9]+|he-ipv6)$' | head -1)
+    if [ -n "${TUNNEL_IF}" ]; then
+        echo "检测到隧道接口: ${TUNNEL_IF}"
+        firewall-cmd -q --permanent --zone=public --add-interface=${TUNNEL_IF} 2>/dev/null
+    else
+        echo "警告: 未检测到 6in4 隧道接口，请手动确认接口名"
+    fi
+
+    # ---------- 5. IPv4 放行 ----------
     firewall-cmd -q --permanent --add-port=80/tcp
     firewall-cmd -q --permanent --add-port=443/tcp
-    [ -n "${aadd_port2}" ] && firewall-cmd -q --permanent --add-port=${aadd_port2}/tcp
+    if [ -n "${aadd_port2}" ]; then
+        firewall-cmd -q --permanent --add-port=${aadd_port2}/tcp
+    fi
 
-    # ---- IPv6 端口（显式 family） ----
+    # ---------- 6. IPv6 放行（显式 family=ipv6） ----------
     for p in 80 443 ${aadd_port2}; do
         [ -n "$p" ] || continue
         firewall-cmd -q --permanent --add-rich-rule="rule family=\"ipv6\" port port=\"${p}\" protocol=\"tcp\" accept"
     done
 
-    # ---- ICMPv6 放行（ping6 / ND 必需） ----
+    # ---------- 7. ICMPv6 关键类型放行（ping6 / ND / RA 必需） ----------
     firewall-cmd -q --permanent --add-rich-rule='rule family="ipv6" protocol value="ipv6-icmp" accept'
 
-    # ---- IPv4 出站伪装 ----
+    # ---------- 8. proto-41 放行（6in4 隧道封装） ----------
+    firewall-cmd -q --permanent --add-rich-rule='rule protocol value="41" accept'
+
+    # ---------- 9. IPv4 出站伪装 ----------
     firewall-cmd -q --permanent --add-masquerade
 
-    # ---- IPv6 转发放行 + NAT66 ----
-    firewall-cmd -q --permanent --direct --add-rule ipv6 filter FORWARD 0 -p ipv6-icmp -j ACCEPT
-    firewall-cmd -q --permanent --direct --add-rule ipv6 filter FORWARD 0 -j ACCEPT
+    # ---------- 10. IPv6 转发放行 + NAT66（ULA 客户端出站需要） ----------
+    # 使用 zone 的 forward 而非 direct 规则（nftables 后端下 direct ACCEPT 不可靠）
+    firewall-cmd -q --permanent --zone=public --add-forward
     firewall-cmd -q --permanent --add-rich-rule='rule family="ipv6" masquerade'
 
-    # ---- 重载 ----
+    # ---------- 11. 重载 ----------
     firewall-cmd -q --reload
+
+    echo "===== 防火墙配置完成 ====="
+    echo "--- active zones ---"
+    firewall-cmd --get-active-zones
+    echo "--- rich rules ---"
+    firewall-cmd --permanent --list-rich-rules
+    echo "--- ports ---"
+    firewall-cmd --permanent --list-ports
 }
 #########################################
 function ConfigSystem {
-    # 允许 nginx 连接后端网络端口（stream proxy_pass 需要）
+    # SELinux：允许 nginx 连接后端、ocserv 读证书
     setsebool -P httpd_can_network_connect 1
-    setsebool -P httpd_can_network_relay  1
-    # 让 ocserv 能读证书
-    #semanage fcontext -a -t cert_t "/etc/pki/ocs(/.*)?"
-    #restorecon -Rv /etc/pki/ocs
-    #添加开机启动
+    setsebool -P httpd_can_network_relay   1
+
+    # 端口上下文（如使用非标准端口需要；80/443/8443/4443）
+    semanage port -a -t http_port_t  -p tcp 8443 2>/dev/null || true
+    semanage port -a -t ocserv_port_t -p tcp 4443 2>/dev/null || true
+
+    # 开机启动
     systemctl -q enable firewalld.service
     systemctl -q enable ocserv.service
     systemctl -q enable nginx.service
-    #开启服务
-    systemctl -q start ocserv.service
-    systemctl -q start nginx.service
+
+    # 启动服务
+    systemctl -q restart ocserv.service
+    systemctl -q restart nginx.service
 }
 #########################################
 ConfigEnvironment

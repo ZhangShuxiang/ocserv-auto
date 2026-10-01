@@ -80,7 +80,7 @@ function InstallCert {
 #########################################
 function InstallUserCert {
     #导出用户证书
-    #(echo "${username}"; sleep 3; echo "${password}"; sleep 3; echo "${password}") | \
+    (echo "${username}"; sleep 3; echo "${password}"; sleep 3; echo "${password}") | \
     certtool --to-p12 --load-privkey user-key.pem \
     --pkcs-cipher 3des-pkcs12 \
     --load-certificate user-cert.pem \

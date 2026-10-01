@@ -80,7 +80,7 @@ function InstallCert {
 #########################################
 function InstallUserCert {
     #导出用户证书
-    #(echo "${password}"; sleep 2; echo "${password}") | \
+    #(echo "${username}"; sleep 3; echo "${password}"; sleep 3; echo "${password}") | \
     certtool --to-p12 --load-privkey user-key.pem \
     --pkcs-cipher 3des-pkcs12 \
     --load-certificate user-cert.pem \
@@ -121,19 +121,38 @@ function ConfigNginx {
 
 #########################################
 function ConfigFirewall {
-    #编辑系统文件
-    sysctl -w net.ipv4.ip_forward=1 >> /etc/sysctl.conf
-    sysctl -w net.ipv6.conf.all.forwarding=1 >> /etc/sysctl.conf
-    #开启防火墙服务
-    systemctl -q start firewalld.service
-    #添加防火墙允许端口--add-port--remove-port
-    firewall-cmd -q --permanent --add-port=${aadd_port2}/tcp
-    firewall-cmd -q --permanent --add-port=443/tcp
+    # ---- 内核参数（用 echo 追加，避免重复） ----
+    grep -q '^net.ipv4.ip_forward=1'                  /etc/sysctl.conf || echo 'net.ipv4.ip_forward=1'                  >> /etc/sysctl.conf
+    grep -q '^net.ipv6.conf.all.forwarding=1'         /etc/sysctl.conf || echo 'net.ipv6.conf.all.forwarding=1'         >> /etc/sysctl.conf
+    grep -q '^net.ipv6.conf.all.accept_ra=2'          /etc/sysctl.conf || echo 'net.ipv6.conf.all.accept_ra=2'          >> /etc/sysctl.conf
+    sysctl --system >/dev/null
+
+    # ---- 启动 firewalld ----
+    systemctl -q enable --now firewalld.service
+
+    # ---- IPv4 端口 ----
     firewall-cmd -q --permanent --add-port=80/tcp
-    #开启伪装IP
+    firewall-cmd -q --permanent --add-port=443/tcp
+    [ -n "${aadd_port2}" ] && firewall-cmd -q --permanent --add-port=${aadd_port2}/tcp
+
+    # ---- IPv6 端口（显式 family） ----
+    for p in 80 443 ${aadd_port2}; do
+        [ -n "$p" ] || continue
+        firewall-cmd -q --permanent --add-rich-rule="rule family=\"ipv6\" port port=\"${p}\" protocol=\"tcp\" accept"
+    done
+
+    # ---- ICMPv6 放行（ping6 / ND 必需） ----
+    firewall-cmd -q --permanent --add-rich-rule='rule family="ipv6" protocol value="ipv6-icmp" accept'
+
+    # ---- IPv4 出站伪装 ----
     firewall-cmd -q --permanent --add-masquerade
-    firewall-cmd -q --permanent --add-rich-rule='rule family=ipv6 masquerade'
-    #重新加载防火墙
+
+    # ---- IPv6 转发放行 + NAT66 ----
+    firewall-cmd -q --permanent --direct --add-rule ipv6 filter FORWARD 0 -p ipv6-icmp -j ACCEPT
+    firewall-cmd -q --permanent --direct --add-rule ipv6 filter FORWARD 0 -j ACCEPT
+    firewall-cmd -q --permanent --add-rich-rule='rule family="ipv6" masquerade'
+
+    # ---- 重载 ----
     firewall-cmd -q --reload
 }
 #########################################

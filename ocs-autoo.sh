@@ -32,9 +32,7 @@ function ConfigEnvironment {
     #echo -n "ocs port: "
     #read porttmp1
     #aadd_port1=${porttmp1}
-    echo -n "ssh port: "
-    read porttmp2
-    aadd_port2=${porttmp2}
+    aadd_port2=$(sshd -T 2>/dev/null | awk '/^port /{print $2; exit}' || echo 22)
     #域名
     echo -n "www."
     read wwwtmp1

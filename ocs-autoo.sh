@@ -139,11 +139,11 @@ function ConfigFirewall {
 #########################################
 function ConfigSystem {
     # 允许 nginx 连接后端网络端口（stream proxy_pass 需要）
-    setsebool -P httpd_can_network_connect 1
-    setsebool -P httpd_can_network_relay  1
+    #setsebool -P httpd_can_network_connect 1
+    #setsebool -P httpd_can_network_relay  1
     # 让 ocserv 能读证书
-    semanage fcontext -a -t cert_t "/etc/pki/ocs(/.*)?"
-    restorecon -Rv /etc/pki/ocs
+    #semanage fcontext -a -t cert_t "/etc/pki/ocs(/.*)?"
+    #restorecon -Rv /etc/pki/ocs
     #添加开机启动
     systemctl -q enable firewalld.service
     systemctl -q enable ocserv.service

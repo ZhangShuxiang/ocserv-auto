@@ -80,13 +80,12 @@ function InstallCert {
 #########################################
 function InstallUserCert {
     #导出用户证书
-    #(echo "${username}"; sleep 3; echo "${password}"; sleep 3; echo "${password}") | \
     certtool --to-p12 --load-privkey user-key.pem \
     --pkcs-cipher 3des-pkcs12 \
     --load-certificate user-cert.pem \
     --outfile user.p12 --outder
     #复制证书文件
-    cp ./user.p12 ${file4}user.p12.bak
+    cp user.p12 ${file4}user.p12.bak
     mkdir -p /etc/pki/ocs
     cp -a . /etc/pki/ocs/
     #/etc/pki/ocs/server-cert.pem

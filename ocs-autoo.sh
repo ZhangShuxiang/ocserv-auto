@@ -80,7 +80,7 @@ function InstallCert {
 #########################################
 function InstallUserCert {
     #导出用户证书
-    (echo "${password}"; sleep 2; echo "${password}") | \
+    #(echo "${password}"; sleep 2; echo "${password}") | \
     certtool --to-p12 --load-privkey user-key.pem \
     --pkcs-cipher 3des-pkcs12 \
     --load-certificate user-cert.pem \
@@ -114,9 +114,9 @@ function ConfigNginx {
     sed -i "s@\[WWWUSER\]@${username}@g" ${file3}nginx.conf
 }
 #########################################
-function ConfigRoute {
-    #添加自定义规则
-}
+#function ConfigRoute {
+#    #添加自定义规则
+#}
 #########################################
 
 #########################################
@@ -139,8 +139,8 @@ function ConfigFirewall {
 #########################################
 function ConfigSystem {
     # 允许 nginx 连接后端网络端口（stream proxy_pass 需要）
-    #setsebool -P httpd_can_network_connect 1
-    #setsebool -P httpd_can_network_relay  1
+    setsebool -P httpd_can_network_connect 1
+    setsebool -P httpd_can_network_relay  1
     # 让 ocserv 能读证书
     #semanage fcontext -a -t cert_t "/etc/pki/ocs(/.*)?"
     #restorecon -Rv /etc/pki/ocs

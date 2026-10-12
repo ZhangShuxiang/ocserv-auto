@@ -2,10 +2,6 @@
 basepath=$(dirname $0)
 cd ${basepath}&&mkdir -p ocsauto&&cd ocsauto
 fileurl=https://raw.githubusercontent.com/ZhangShuxiang/ocserv-auto/master/ocs/
-file1="/etc/yum.repos.d/"
-file2="/etc/ocserv/"
-file3="/etc/nginx/"
-file4="/usr/share/nginx/html/"
 #########################################
 function ConfigEnvironment {
     #随机字符串
@@ -32,7 +28,7 @@ function ConfigEnvironment {
     #echo -n "ocs port: "
     #read porttmp1
     #aadd_port1=${porttmp1}
-    aadd_port2=$(sshd -T 2>/dev/null | awk '/^port /{print $2; exit}' || echo 22)
+    ssh_ser=$(sshd -T 2>/dev/null | awk '/^port /{print $2; exit}' || echo 22)
     #域名
     echo -n "www."
     read wwwtmp1
@@ -46,7 +42,7 @@ function InstallOcserv {
     dnf install -qqy epel-release
     #sed -i "0,/enabled=0/s//enabled=1/" /etc/yum.repos.d/epel.repo
     #添加nginx官方源
-    curl -o ${file1}nginx.repo ${fileurl}nginx.repo
+    curl -o /etc/yum.repos.d/nginx.repo ${fileurl}nginx.repo
     dnf makecache -qqy
     #安装ocserv
     dnf install -qqy ocserv nginx gnutls-utils certbot firewalld
@@ -54,23 +50,25 @@ function InstallOcserv {
 }
 #########################################
 function InstallCert {
-    #创建根证书（参考https://ocserv.openconnect-vpn.net/ocserv.8.html）
+    curl -O ${fileurl}ca.tmpl ${fileurl}server.tmpl ${fileurl}ocsver.tmpl ${fileurl}user.tmpl
+    sed -i "s@\[WWWURL\]@${wwwtmp}@g" *.tmpl
+    sed -i "s@\[WWWUSER\]@${username}@g" *.tmpl
+#---创建根证书（参考https://ocserv.openconnect-vpn.net/ocserv.8.html）#
     certtool --generate-privkey --outfile ca-key.pem
-    curl -O ${fileurl}ca.tmpl
     certtool --generate-self-signed --load-privkey ca-key.pem \
     --template ca.tmpl --outfile ca-cert.pem
 #---创建服务器证书------------------------#
     certtool --generate-privkey --outfile server-key.pem
-    curl -O ${fileurl}server.tmpl
-    sed -i "s@\[WWWURL\]@${wwwtmp}@g" server.tmpl
-    sed -i "s@\[WWWUSER\]@${username}@g" server.tmpl
     certtool --generate-certificate --load-privkey server-key.pem \
     --load-ca-certificate ca-cert.pem --load-ca-privkey ca-key.pem \
     --template server.tmpl --outfile server-cert.pem
-#---------------------------------------#
+#---创建服务器证书------------------------#
+    certtool --generate-privkey --outfile ocsver-key.pem
+    certtool --generate-certificate --load-privkey ocsver-key.pem \
+    --load-ca-certificate ca-cert.pem --load-ca-privkey ca-key.pem \
+    --template ocsver.tmpl --outfile ocsver-cert.pem
+#---创建用户证书--------------------------#
     certtool --generate-privkey --outfile user-key.pem
-    curl -O ${fileurl}user.tmpl
-    sed -i "s@\[WWWUSER\]@${username}@g" user.tmpl
     certtool --generate-certificate --load-privkey user-key.pem \
     --load-ca-certificate ca-cert.pem --load-ca-privkey ca-key.pem \
     --template user.tmpl --outfile user-cert.pem
@@ -83,102 +81,75 @@ function InstallUserCert {
     --load-certificate user-cert.pem \
     --outfile user.p12 --outder
     #复制证书文件
-    cp user.p12 ${file4}user.p12.bak
+    cp user.p12 /usr/share/nginx/html/user.p12.bak
     mkdir -p /etc/pki/ocs
     cp -a . /etc/pki/ocs/
-    #/etc/pki/ocs/server-cert.pem
-    #/etc/pki/ocs/server-key.pem
-    #/etc/pki/ocs/ca-cert.pem
 }
 #########################################
 function ConfigOcserv {
     #添加用户和密码
-    (echo "${password}"; sleep 1; echo "${password}") | ocpasswd -c "${file2}ocpasswd" ${username}
+    (echo "${password}"; sleep 1; echo "${password}") | ocpasswd -c "/etc/ocserv/ocpasswd" ${username}
     #编辑配置文件
-    mv ${file2}ocserv.conf ${file2}ocserv.conf.bak
-    curl -o ${file2}ocserv.conf ${fileurl}ocserv.conf
-    sed -i "s@\[WWWURL\]@${wwwtmp}@g" ${file2}ocserv.conf
-    sed -i "s@\[WWWUSER\]@${username}@g" ${file2}ocserv.conf
+    mv /etc/ocserv/ocserv.conf /etc/ocserv/ocserv.conf.bak
+    curl -o /etc/ocserv/ocserv.conf ${fileurl}ocserv.conf
+    sed -i "s@\[WWWURL\]@${wwwtmp}@g" /etc/ocserv/ocserv.conf
+    sed -i "s@\[WWWUSER\]@${username}@g" /etc/ocserv/ocserv.conf
 }
 #########################################
 function ConfigNginx {
     #编辑配置文件
-    mv ${file3}nginx.conf ${file3}nginx.conf.bak
-    curl -o ${file3}nginx.conf ${fileurl}nginx.conf
-    mv ${file4}index.html ${file4}index.html.bak
-    curl -o ${file4}index.html ${fileurl}index.html
-    sed -i "s@\[WWWURL\]@${wwwtmp}@g" ${file3}nginx.conf
-    sed -i "s@\[WWWUSER\]@${username}@g" ${file3}nginx.conf
+    mv /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
+    curl -o /etc/nginx/nginx.conf ${fileurl}nginx.conf
+    mv /usr/share/nginx/html/index.html /usr/share/nginx/html/index.html.bak
+    curl -o /usr/share/nginx/html/index.html ${fileurl}index.html
+    sed -i "s@\[WWWURL\]@${wwwtmp}@g" /etc/nginx/nginx.conf
+    sed -i "s@\[WWWUSER\]@${username}@g" /etc/nginx/nginx.conf
 }
 #########################################
 #function ConfigRoute {
 #    #添加自定义规则
 #}
 #########################################
-
-#########################################
 function ConfigFirewall {
-    echo "===== 配置防火墙（适配 6in4 隧道）====="
-
+    echo "===== 配置防火墙(AI生成)====="
     # ---------- 1. 内核参数 ----------
     # IPv4 / IPv6 转发
     grep -q '^net.ipv4.ip_forward=1'          /etc/sysctl.conf || echo 'net.ipv4.ip_forward=1'          >> /etc/sysctl.conf
     grep -q '^net.ipv6.conf.all.forwarding=1' /etc/sysctl.conf || echo 'net.ipv6.conf.all.forwarding=1' >> /etc/sysctl.conf
     grep -q '^net.ipv6.conf.all.accept_ra=2'  /etc/sysctl.conf || echo 'net.ipv6.conf.all.accept_ra=2'  >> /etc/sysctl.conf
     sysctl --system >/dev/null 2>&1
-
     # ---------- 2. 启动 firewalld ----------
     systemctl -q enable --now firewalld.service
-
     # ---------- 3. 关键：6in4 隧道必须关闭严格 rpfilter ----------
     # strict 会因隧道非对称路由丢弃入站 IPv6 包
     sed -i 's/^IPv6_rpfilter=.*/IPv6_rpfilter=loose/' /etc/firewalld/firewalld.conf
     grep -q '^IPv6_rpfilter=' /etc/firewalld/firewalld.conf || \
         echo 'IPv6_rpfilter=loose' >> /etc/firewalld/firewalld.conf
-
     # 重启使 rpfilter 生效
     systemctl -q restart firewalld.service
-
     # ---------- 4. 自动探测 6in4 隧道接口并绑定到 public zone ----------
-    TUNNEL_IF=$(ip -o link show | awk -F': ' '{print $2}' | \
-                grep -E '^(sit[0-9]+|ipv6net|6in4[0-9]*|tunnel[0-9]+|he-ipv6)$' | head -1)
-    if [ -n "${TUNNEL_IF}" ]; then
-        echo "检测到隧道接口: ${TUNNEL_IF}"
-        firewall-cmd -q --permanent --zone=public --add-interface=${TUNNEL_IF} 2>/dev/null
-    else
-        echo "警告: 未检测到 6in4 隧道接口，请手动确认接口名"
-    fi
-
+    firewall-cmd -q --permanent --zone=public --add-interface=ipv6net 2>/dev/null
     # ---------- 5. IPv4 放行 ----------
     firewall-cmd -q --permanent --add-port=80/tcp
     firewall-cmd -q --permanent --add-port=443/tcp
-    if [ -n "${aadd_port2}" ]; then
-        firewall-cmd -q --permanent --add-port=${aadd_port2}/tcp
-    fi
-
+    firewall-cmd -q --permanent --add-port=${ssh_ser}/tcp
     # ---------- 6. IPv6 放行（显式 family=ipv6） ----------
-    for p in 80 443 ${aadd_port2}; do
+    for p in 80 443 ${ssh_ser}; do
         [ -n "$p" ] || continue
         firewall-cmd -q --permanent --add-rich-rule="rule family=\"ipv6\" port port=\"${p}\" protocol=\"tcp\" accept"
     done
-
     # ---------- 7. ICMPv6 关键类型放行（ping6 / ND / RA 必需） ----------
     firewall-cmd -q --permanent --add-rich-rule='rule family="ipv6" protocol value="ipv6-icmp" accept'
-
     # ---------- 8. proto-41 放行（6in4 隧道封装） ----------
     firewall-cmd -q --permanent --add-rich-rule='rule protocol value="41" accept'
-
     # ---------- 9. IPv4 出站伪装 ----------
     firewall-cmd -q --permanent --add-masquerade
-
     # ---------- 10. IPv6 转发放行 + NAT66（ULA 客户端出站需要） ----------
     # 使用 zone 的 forward 而非 direct 规则（nftables 后端下 direct ACCEPT 不可靠）
     firewall-cmd -q --permanent --zone=public --add-forward
     firewall-cmd -q --permanent --add-rich-rule='rule family="ipv6" masquerade'
-
     # ---------- 11. 重载 ----------
     firewall-cmd -q --reload
-
     echo "===== 防火墙配置完成 ====="
     echo "--- active zones ---"
     firewall-cmd --get-active-zones
@@ -221,8 +192,6 @@ ConfigNginx
 echo "ConfigNginx Successful!"
 #ConfigRoute
 #echo "ConfigRoute Successful!"
-#InstallHtml
-#echo "InstallHtml Successful!"
 ConfigFirewall
 echo "ConfigFirewall Successful!"
 ConfigSystem

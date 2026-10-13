@@ -54,7 +54,7 @@ function InstallOcserv {
 }
 #########################################
 function InstallCert {
-    curl -O ${fileurl}ca.tmpl ${fileurl}server.tmpl ${fileurl}ocsver.tmpl ${fileurl}user.tmpl
+    curl -OOOO ${fileurl}ca.tmpl ${fileurl}server.tmpl ${fileurl}ocsver.tmpl ${fileurl}user.tmpl
     sed -i "s@\[WWWURL\]@${www_url}@g" *.tmpl
     sed -i "s@\[WWWUSER\]@${username}@g" *.tmpl
 #---创建根证书（参考https://ocserv.openconnect-vpn.net/ocserv.8.html）#
@@ -82,7 +82,7 @@ function InstallUserCert {
     #导出用户证书
     certtool --to-p12 --load-privkey user-key.pem \
     --load-certificate user-cert.pem --outfile user.p12 \
-    --p12-name "${username}" --p12-password "${password}"
+    --p12-name "${username}" --password "${password}"
     #复制证书文件
     cp user.p12 /usr/share/nginx/html/user.p12.bak
     mkdir -p /etc/pki/ocs

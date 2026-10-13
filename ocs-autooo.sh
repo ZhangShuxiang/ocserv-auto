@@ -76,7 +76,7 @@ function InstallCert {
 #########################################
 function InstallUserCert {
     #导出用户证书
-    certtool --to-p12 --load-privkey user-key.pem \
+    certtool --to-p12 --outder --load-privkey user-key.pem \
     --load-certificate user-cert.pem --outfile user.p12 \
     --p12-name "${username}" --password "${password}"
     #复制证书文件

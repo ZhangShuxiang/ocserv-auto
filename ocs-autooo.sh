@@ -139,11 +139,12 @@ function ConfigFirewall {
     # ----------6.同区转发----------
     #firewall-cmd -q --permanent --zone=public --add-forward
     # ----------6.转发放行----------
-    #firewall-cmd --permanent --get-policies | grep -qx ocserv-forward || \
-    firewall-cmd --permanent --new-policy=ocserv-forward
-    firewall-cmd --permanent --policy=ocserv-forward --add-ingress-zone=internal
-    firewall-cmd --permanent --policy=ocserv-forward --add-egress-zone=public
-    firewall-cmd --permanent --policy=ocserv-forward --set-target=ACCEPT
+    if ! firewall-cmd --permanent --get-policies | grep -qx 'ocserv-forward'; then
+        firewall-cmd --permanent --new-policy=ocserv-forward
+        firewall-cmd --permanent --policy=ocserv-forward --add-ingress-zone=internal
+        firewall-cmd --permanent --policy=ocserv-forward --add-egress-zone=public
+        firewall-cmd --permanent --policy=ocserv-forward --set-target=ACCEPT
+    fi
     # ----------7.重载----------
     firewall-cmd -q --reload
 }

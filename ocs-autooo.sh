@@ -33,10 +33,6 @@ function ConfigEnvironment {
     echo -n "www."
     read -r www_url_1
     www_url=${www_url_1}
-    # 获取接口IPv6地址和前缀
-    IPV6_ADDR=$(ip -6 addr show dev "ipv6net" scope global | awk '/inet6/{print $2; exit}')
-    IPV6_PREFIX=$(python3 -c "import ipaddress; print(ipaddress.ip_interface('$IPV6_ADDR').network)")
-    echo $IPV6_PREFIX
 }
 #########################################
 function InstallOcserv {
@@ -98,6 +94,9 @@ function ConfigOcserv {
     curl -o /etc/ocserv/ocserv.conf ${fileurl}ocserv.conf
     sed -i "s@\[WWWURL\]@${www_url}@g" /etc/ocserv/ocserv.conf
     sed -i "s@\[WWWUSER\]@${username}@g" /etc/ocserv/ocserv.conf
+    #修改IPv6地址
+    IPV6_ADDR=$(ip -6 addr show dev "ipv6net" scope global | awk '/inet6/{print $2; exit}')
+    IPV6_PREFIX=$(python3 -c "import ipaddress; print(ipaddress.ip_interface('$IPV6_ADDR').network)")
     if [ -n "${IPV6_PREFIX}" ]; then
         sed -i "s@fc00::/64@${IPV6_PREFIX}@g" /etc/ocserv/ocserv.conf
     fi

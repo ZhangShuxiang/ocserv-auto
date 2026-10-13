@@ -12,7 +12,7 @@ function ConfigEnvironment {
     username=$(randstr)
     echo -e "\nPlease input ocserv user name."
     printf "Default user name is \e[33m${username}\e[0m, let it blank to use this user name: "
-    read usernametmp
+    read -r usernametmp
     if [[ -n "${usernametmp}" ]]; then
         username=${usernametmp}
     fi
@@ -20,7 +20,7 @@ function ConfigEnvironment {
     password=$(randstr)
     printf "\nPlease input \e[33m${username}\e[0m's password.\n"
     printf "Random password is \e[33m${password}\e[0m, let it blank to use this password: "
-    read passwordtmp
+    read -r passwordtmp
     if [[ -n "${passwordtmp}" ]]; then
         password=${passwordtmp}
     fi
@@ -31,8 +31,8 @@ function ConfigEnvironment {
     ssh_ser=$(sshd -T 2>/dev/null | awk '/^port /{print $2; exit}' || echo 22)
     #域名
     echo -n "www."
-    read wwwtmp1
-    wwwtmp=${wwwtmp1}
+    read -r www_url_1
+    www_url=${www_url_1}
     # 获取接口IPv6地址和前缀
     IPV6_ADDR=$(ip -6 addr show dev "ipv6net" scope global | awk '/inet6/{print $2; exit}')
     IPV6_PREFIX=$(python3 -c "import ipaddress; print(ipaddress.ip_interface('$IPV6_ADDR').network)")
@@ -55,7 +55,7 @@ function InstallOcserv {
 #########################################
 function InstallCert {
     curl -O ${fileurl}ca.tmpl ${fileurl}server.tmpl ${fileurl}ocsver.tmpl ${fileurl}user.tmpl
-    sed -i "s@\[WWWURL\]@${wwwtmp}@g" *.tmpl
+    sed -i "s@\[WWWURL\]@${www_url}@g" *.tmpl
     sed -i "s@\[WWWUSER\]@${username}@g" *.tmpl
 #---创建根证书（参考https://ocserv.openconnect-vpn.net/ocserv.8.html）#
     certtool --generate-privkey --outfile ca-key.pem
@@ -81,9 +81,8 @@ function InstallCert {
 function InstallUserCert {
     #导出用户证书
     certtool --to-p12 --load-privkey user-key.pem \
-    --pkcs-cipher 3des-pkcs12 \
-    --load-certificate user-cert.pem \
-    --outfile user.p12 --outder
+    --load-certificate user-cert.pem --outfile user.p12 \
+    --p12-name "${username}" --p12-password "${password}"
     #复制证书文件
     cp user.p12 /usr/share/nginx/html/user.p12.bak
     mkdir -p /etc/pki/ocs
@@ -92,11 +91,12 @@ function InstallUserCert {
 #########################################
 function ConfigOcserv {
     #添加用户和密码
-    (echo "${password}"; sleep 1; echo "${password}") | ocpasswd -c "/etc/ocserv/ocpasswd" ${username}
+    #(echo "${password}"; sleep 1; echo "${password}") | ocpasswd -c "/etc/ocserv/ocpasswd" ${username}
+    printf '%s\n%s\n' "${password}" "${password}" | ocpasswd -c /etc/ocserv/ocpasswd "${username}"
     #编辑配置文件
     mv /etc/ocserv/ocserv.conf /etc/ocserv/ocserv.conf.bak
     curl -o /etc/ocserv/ocserv.conf ${fileurl}ocserv.conf
-    sed -i "s@\[WWWURL\]@${wwwtmp}@g" /etc/ocserv/ocserv.conf
+    sed -i "s@\[WWWURL\]@${www_url}@g" /etc/ocserv/ocserv.conf
     sed -i "s@\[WWWUSER\]@${username}@g" /etc/ocserv/ocserv.conf
     if [ -n "${IPV6_PREFIX}" ]; then
         sed -i "s@fc00::/64@${IPV6_PREFIX}@g" /etc/ocserv/ocserv.conf
@@ -107,10 +107,11 @@ function ConfigNginx {
     #编辑配置文件
     mv /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
     curl -o /etc/nginx/nginx.conf ${fileurl}nginx.conf
+    sed -i "s@\[WWWURL\]@${www_url}@g" /etc/nginx/nginx.conf
+    sed -i "s@\[WWWUSER\]@${username}@g" /etc/nginx/nginx.conf
+    #添加网页文件
     mv /usr/share/nginx/html/index.html /usr/share/nginx/html/index.html.bak
     curl -o /usr/share/nginx/html/index.html ${fileurl}index.html
-    sed -i "s@\[WWWURL\]@${wwwtmp}@g" /etc/nginx/nginx.conf
-    sed -i "s@\[WWWUSER\]@${username}@g" /etc/nginx/nginx.conf
 }
 #########################################
 #function ConfigRoute {
@@ -118,44 +119,45 @@ function ConfigNginx {
 #}
 #########################################
 function ConfigFirewall {
-    echo "===== 配置防火墙(AI生成)====="
-    # ---------- 1. 内核参数 ----------
-    # IPv4 / IPv6 转发
-    grep -q '^net.ipv4.ip_forward=1'             /etc/sysctl.conf || echo 'net.ipv4.ip_forward=1'             >> /etc/sysctl.conf
-    grep -q '^net.ipv6.conf.all.forwarding=1'    /etc/sysctl.conf || echo 'net.ipv6.conf.all.forwarding=1'    >> /etc/sysctl.conf
-    grep -q '^net.ipv6.conf.all.proxy_ndp=1'     /etc/sysctl.conf || echo 'net.ipv6.conf.all.proxy_ndp=1'     >> /etc/sysctl.conf
-    grep -q '^net.ipv6.conf.all.accept_ra=2'     /etc/sysctl.conf || echo 'net.ipv6.conf.all.accept_ra=2'     >> /etc/sysctl.conf
-    sysctl --system >/dev/null 2>&1
-    # ---------- 2. 启动 firewalld ----------
+    # ----------1.内核转发----------
+    curl -o /etc/sysctl.d/99-ocserv.conf ${fileurl}99-ocserv.conf
+    #sysctl --system
+    sysctl -p /etc/sysctl.d/99-ocserv.conf
+    # ----------2.启动防火墙----------
     systemctl -q enable --now firewalld.service
-    # ---------- 4. 自动探测 6in4 隧道接口并绑定到 public zone ----------
+    # ----------3.接口绑定----------
     firewall-cmd -q --permanent --zone=public --change-interface=eth0
     firewall-cmd -q --permanent --zone=public --change-interface=ipv6net
     firewall-cmd -q --permanent --zone=internal --change-interface=ocstun
-    # ---------- 5. IPv4 放行 ----------
+    # ----------4.放行端口----------
     firewall-cmd -q --permanent --zone=public --add-protocol=41
     firewall-cmd -q --permanent --zone=public --add-port=80/tcp
     firewall-cmd -q --permanent --zone=public --add-port=443/tcp
     firewall-cmd -q --permanent --zone=public --add-port=${ssh_ser}/tcp
-    # ---------- 9. IPv4出站伪装 ----------
+    # ----------5.IPv4NAT----------
     firewall-cmd -q --permanent --zone=public --add-masquerade
-    # ---------- 10. IPv4转发放行 ----------
+    # ----------6.同区转发----------
+    #firewall-cmd -q --permanent --zone=public --add-forward
+    # ----------6.转发放行----------
+    #firewall-cmd --permanent --get-policies | grep -qx ocserv-forward || \
     firewall-cmd --permanent --new-policy=ocserv-forward
     firewall-cmd --permanent --policy=ocserv-forward --add-ingress-zone=internal
     firewall-cmd --permanent --policy=ocserv-forward --add-egress-zone=public
     firewall-cmd --permanent --policy=ocserv-forward --set-target=ACCEPT
-    # ---------- 11. 重载 ----------
+    # ----------7.重载----------
     firewall-cmd -q --reload
 }
 #########################################
 function ConfigSystem {
+    #SELinux默认关闭
+    #setenforce 0
+    #sudo sed -i 's/^SELINUX=.*/SELINUX=disabled/' /etc/selinux/config
     # SELinux：允许 nginx 连接后端、ocserv 读证书
-    setsebool -P httpd_can_network_connect 1
-    setsebool -P httpd_can_network_relay   1
-
+    #setsebool -P httpd_can_network_connect 1
+    #setsebool -P httpd_can_network_relay   1
     # 端口上下文（如使用非标准端口需要；80/443/8443/4443）
-    semanage port -a -t http_port_t  -p tcp 8443 2>/dev/null || true
-    semanage port -a -t ocserv_port_t -p tcp 4443 2>/dev/null || true
+    #semanage port -a -t http_port_t  -p tcp 8443 2>/dev/null || true
+    #semanage port -a -t ocserv_port_t -p tcp 4443 2>/dev/null || true
 
     # 开机启动
     systemctl -q enable firewalld.service
@@ -185,4 +187,4 @@ ConfigFirewall
 echo "ConfigFirewall Successful!"
 ConfigSystem
 echo "ConfigSystem Successful!"
-exit
+exit 0

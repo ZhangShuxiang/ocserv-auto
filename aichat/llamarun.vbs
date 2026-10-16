@@ -1,0 +1,1 @@
+CreateObject("WScript.Shell").Run ".\llama\llama-server.exe -m .\llama\Qwen3.5-9B-UD-Q4_K_XL.gguf --host 0.0.0.0 --port 8888 -c 49152 -ngl 999 --api-key sk-123456789123456789",0

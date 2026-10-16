@@ -1,0 +1,77 @@
+在Windows上使用llama.cpp部署模型并提供API接口，最简单快捷的方法是直接下载预编译的可执行文件。整个过程可以分为以下三步：
+
+第一步：下载与准备
+
+· 下载 llama.cpp：访问其官方GitHub Releases页面。根据你的需求选择对应版本：
+  · 仅用CPU：下载 llama-b...-bin-win-cpu-x64.zip。
+  · RTX 3050 (CUDA) 加速：下载 llama-b...-bin-win-cuda-12.4-x64.zip。同时需要下载同页面的 cudart-llama-bin-win-... 文件，解压后将其中的 .dll 文件放到 llama.cpp 所在目录。
+· 放置模型文件：将你下载的GGUF模型文件（如 Qwen3.6-27B-Q4_K_M.gguf）放在一个方便的位置，例如 D:\models\。
+
+第二步：启动API服务
+
+打开命令提示符 (cmd)，进入 llama.cpp 的解压目录，运行 llama-server.exe 即可启动服务。
+
+基础命令格式如下：
+
+```bash
+llama-server.exe -m 模型路径\模型文件名.gguf --host 0.0.0.0 --port 8080
+```
+
+· -m：指定模型文件的完整路径。
+· --host 0.0.0.0：允许其他设备（如局域网内的电脑）访问。
+· --port 8080：指定服务端口，默认是8080。
+
+结合你的配置（RTX 3050 8G + 64G内存），推荐使用以下命令：
+
+```bash
+.\ggml-rpc-server.exe --device CUDA0 -H 0.0.0.0 -p 50052
+.\llama-server.exe -m E:\mos\Qwen3.5-4B-Q4_K_M.gguf --host 0.0.0.0 --port 8888 -c 131072 --rpc 192.168.101.109:50052 --tensor-split 1,1 -ngl 999 --api-key sk-123456789123456789
+.\llama-server.exe -m E:\mos\Qwen3.5-4B-Q4_K_M.gguf --host 0.0.0.0 --port 8888 -c 131072 -ngl 99 --api-key sk-123456789123456789
+.\llama-server.exe -m E:\mos\Qwen3.5-4B-UD-Q8_K_XL.gguf --host 0.0.0.0 --port 8888 -c 65536 -ngl 99 --api-key sk-123456789123456789
+.\llama-server.exe -m E:\mos\Qwen3.5-9B-Q4_K_M.gguf --host 0.0.0.0 --port 8888 -c 49152 -ngl 99 --api-key sk-123456789123456789
+.\llama-server.exe -m E:\mos\Qwen3.5-9B-Q4_K_M.gguf --mmproj E:\mos\mmproj-F16.gguf --host 0.0.0.0 --port 8888 -c 32768 -ngl 99 --api-key sk-123456789123456789
+.\llama-server.exe -m E:\mos\Qwen3.5-9B-UD-Q4_K_XL.gguf --host 0.0.0.0 --port 8888 -c 32768 -ngl 99 --api-key sk-123456789123456789
+.\llama-server.exe -m E:\mos\Qwen3.5-9B-UD-Q4_K_XL.gguf --host 0.0.0.0 --port 8888 -c 131072 --rpc 192.168.101.109:50052 --tensor-split 1,1 -ngl 99 --api-key sk-123456789123456789
+```
+
+· -c 4096：设置上下文大小为4096。
+· --n-gpu-layers 22：将22层模型加载到GPU（-1表示全加载）。
+
+服务启动后，终端会显示 HTTP server listening 信息，表示API已准备就绪。
+
+第三步：验证与调用
+
+服务启动后，可以通过以下两种方式测试：
+
+· 使用 curl 命令（在新的命令提示符中运行）：
+  ```bash
+  curl http://localhost:8080/completion -H "Content-Type: application/json" -d "{\"prompt\": \"你好\", \"temperature\": 0.7, \"max_tokens\": 128}"
+  ```
+· 使用Python脚本：通过 requests 库调用API。
+
+?? 进阶提示
+
+· 放行防火墙：如需局域网访问，可在Windows防火墙中添加入站规则，允许8080端口（或其他你设置的端口）。
+· 更多API端点：服务支持OpenAI兼容的 /v1/chat/completions 端点。
+
+如果不确定该下载哪个版本的 llama.cpp 或遇到了报错，随时可以再问我。
+===================================================
+mmproj-F16.gguf 和 mmproj-BF16.gguf 都是多模态模型中视觉编码器的权重文件，它们的作用是让模型“看懂”图片。区别主要在于数值精度和硬件适配：
+
+· F16 (FP16)：兼容性最佳的“行业标准”。几乎所有GPU都能良好支持，是最稳妥的选择。
+· BF16 (bfloat16)：为现代NVIDIA GPU（安培Ampere架构及更新，如RTX 30/40系列）优化。理论上精度损失比F16更小，能提供更高准确性。
+· ⚠️ 兼容性风险：BF16在部分老硬件或软件版本上可能崩溃或导致输出异常。对于你的RTX 3050，建议优先选 mmproj-F16.gguf 确保稳定运行。
+
+如何在llama.cpp中加载
+
+在启动 llama-server.exe 或 llama-cli.exe 时，通过 --mmproj 参数指定文件路径即可：
+
+```bash
+llama-server.exe -m D:\models\Qwen3.6-27B-Q4_K_M.gguf --mmproj D:\models\mmproj-F16.gguf --host 0.0.0.0 --port 8080 -c 4096 --n-gpu-layers 22
+```
+
+几点提醒：
+
+· 需配套使用：mmproj 文件必须与同一个模型系列（如均为Qwen3.6）搭配，混用会报错。
+· 可选的额外控制：可使用 --mmproj-offload 将视觉模型也加载到GPU加速；若显存不足，可用 --no-mmproj-offload 强制在CPU运行。
+· 纯文本不需要：如果只进行文字对话，无需加载此文件。

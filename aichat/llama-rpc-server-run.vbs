@@ -1,0 +1,1 @@
+CreateObject("WScript.Shell").Run ".\llama\ggml-rpc-server.exe --device CUDA0 -H 0.0.0.0 -p 50051",0

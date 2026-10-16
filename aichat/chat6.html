@@ -1843,7 +1843,12 @@
       }
     }
 
-    /* ==================== 移动端遮罩 ==================== */
+    /* ==================== 移动端遮罩 ====================
+     * ★ 修复：遮罩层在移动端始终 display:block，之前没有设置 pointer-events，
+     *   导致侧边栏关闭时仍然以 z-index:55 覆盖整个视口，拦截了所有触摸/点击事件，
+     *   表现为「主区域完全点不动」。
+     *   现在默认 pointer-events:none，仅当 body.sidebar-open 时才恢复交互。
+     */
     #sidebarOverlay {
       display: none;
       position: fixed;
@@ -1851,6 +1856,7 @@
       background: rgba(8, 10, 16, .5);
       z-index: 55;
       opacity: 0;
+      pointer-events: none;
       transition: opacity .25s;
     }
 
@@ -1878,6 +1884,7 @@
 
       body.sidebar-open #sidebarOverlay {
         opacity: 1;
+        pointer-events: auto;
       }
 
       #btnMenu {

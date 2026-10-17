@@ -42,6 +42,7 @@
       --think-bg: #fbfbfe;
       --think-border: #e3e5f0;
       --sidebar-w: 280px;
+      --code-scroll-max: 340px;
     }
 
     [data-theme="dark"] {
@@ -136,7 +137,6 @@
       transition: background-color .22s ease, color .22s ease, border-color .22s ease;
     }
 
-    /* 滚动条 */
     ::-webkit-scrollbar {
       width: 8px;
       height: 8px;
@@ -1003,7 +1003,7 @@
       font-size: .88em;
     }
 
-    /* ==================== 代码块 + 折叠 ==================== */
+    /* ==================== 代码块 ==================== */
     .code-block {
       margin: 12px 0;
       border: 1px solid var(--border);
@@ -1069,6 +1069,25 @@
       white-space: nowrap;
     }
 
+    .code-mode-btn {
+      flex-shrink: 0;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-dim);
+      font-size: 12px;
+      padding: 3px 8px;
+      border-radius: 7px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background-color .15s, border-color .15s, color .15s;
+    }
+
+    .code-mode-btn:hover {
+      background: var(--bg-card);
+      border-color: var(--border);
+      color: var(--accent);
+    }
+
     .copy-btn {
       flex-shrink: 0;
       border: 1px solid transparent;
@@ -1105,6 +1124,28 @@
       line-height: 1.6;
       background: transparent !important;
       -webkit-overflow-scrolling: touch;
+    }
+
+    .code-block.streaming pre {
+      max-height: var(--code-scroll-max);
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+
+    .code-block.streaming pre code {
+      overflow: visible;
+    }
+
+    .code-block.mode-scroll:not(.collapsed) pre {
+      max-height: var(--code-scroll-max);
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+
+    .code-block.mode-scroll:not(.collapsed) pre code {
+      overflow: visible;
     }
 
     .code-block.collapsed pre {
@@ -1386,7 +1427,6 @@
       line-height: 1.55;
       font-size: 14.5px;
       max-height: 200px;
-      /* 超长文本输入时降低绘制成本：使用文本包含策略，避免浏览器大范围重排 */
       contain: content;
     }
 
@@ -1843,12 +1883,7 @@
       }
     }
 
-    /* ==================== 移动端遮罩 ====================
-     * ★ 修复：遮罩层在移动端始终 display:block，之前没有设置 pointer-events，
-     *   导致侧边栏关闭时仍然以 z-index:55 覆盖整个视口，拦截了所有触摸/点击事件，
-     *   表现为「主区域完全点不动」。
-     *   现在默认 pointer-events:none，仅当 body.sidebar-open 时才恢复交互。
-     */
+    /* ==================== 移动端遮罩 ==================== */
     #sidebarOverlay {
       display: none;
       position: fixed;
@@ -1930,6 +1965,7 @@
     @media (max-width: 640px) {
       :root {
         --sidebar-w: 82vw;
+        --code-scroll-max: 260px;
       }
 
       .brand {
@@ -2089,6 +2125,11 @@
         font-size: 10.5px;
       }
 
+      .code-mode-btn {
+        font-size: 11.5px;
+        padding: 4px 8px;
+      }
+
       .code-block pre code {
         padding: 11px;
         font-size: 12.5px;
@@ -2244,7 +2285,7 @@
 
       #settingsCard {
         width: 100%;
-        max-height: 90vh;
+        max-height: 95%;
         border-radius: 20px 20px 0 0;
         animation: sheetIn .3s cubic-bezier(.2, .9, .3, 1.1);
       }
@@ -2304,7 +2345,6 @@
       }
     }
 
-    /* ==================== 超窄屏微调 ==================== */
     @media (max-width: 380px) {
       .msg {
         padding: 6px 8px;
@@ -2364,7 +2404,6 @@
 <body>
 
   <div id="app">
-    <!-- ==================== 侧边栏 ==================== -->
     <aside id="sidebar">
       <div class="brand">
         <span class="logo">✦</span>
@@ -2409,7 +2448,6 @@
 
     <div id="sidebarOverlay"></div>
 
-    <!-- ==================== 主区域 ==================== -->
     <main id="main">
       <header id="chatHeader">
         <button class="icon-btn ghost" id="btnMenu" title="打开侧边栏" aria-label="打开侧边栏">
@@ -2485,7 +2523,6 @@
     </main>
   </div>
 
-  <!-- ==================== 设置弹窗 ==================== -->
   <div id="settingsModal">
     <div id="settingsCard" role="dialog" aria-modal="true" aria-label="设置">
       <div id="settingsHead">
@@ -2520,25 +2557,13 @@
     (() => {
       'use strict';
 
-      /* ============================================================
-       * ★ 服务商配置（源码内置，开箱即用）
-       *
-       * reasoning_effort 可选值：
-       *   ''       不请求思考（默认）
-       *   'low'    低强度思考
-       *   'medium' 中强度思考
-       *   'high'   高强度思考
-       *
-       * max_tokens 说明：
-       *   有效范围 [1, 393216]，留空表示不发送该参数（由服务端取默认值）。
-       *   为避免 HTTP 400 Invalid max_tokens 错误，发送前会自动钳制到有效范围。
-       * ============================================================ */
       const BUILTIN_PROVIDERS = [
         {
           name: 'llama-cpp',
           api_key: 'sk-123456789123456789',
           base_url: 'http://192.168.101.11:8888/v1',
           model: 'Qwen3.5-9B-Q4_K_M',
+          api_mode: 'chat',
           temperature: 0.7,
           max_tokens: 32768,
           reasoning_effort: '',
@@ -2548,6 +2573,7 @@
           api_key: '',
           base_url: 'https://api.deepseek.com/v1',
           model: 'deepseek-flash',
+          api_mode: 'chat',
           temperature: 1.0,
           max_tokens: 393216,
           reasoning_effort: '',
@@ -2557,18 +2583,20 @@
       const STORAGE_KEY = 'web_ai_chat_state_v2';
       const DEFAULT_PROVIDER = {
         name: '新服务商', api_key: '', base_url: 'https://api.openai.com/v1',
-        model: 'gpt-4o-mini', temperature: 0.7, max_tokens: 2048, reasoning_effort: '',
+        model: 'gpt-4o-mini', api_mode: 'chat',
+        temperature: 0.7, max_tokens: 2048, reasoning_effort: '',
       };
       const DEFAULT_SYSTEM_PROMPT = '你是一个可爱的有趣的有帮助的AI助手。';
       const IMG_TOKEN_EST = 85;
-      const CODE_COLLAPSE_THRESHOLD = 15;
 
-      // ★ max_tokens 有效范围（客户端做二次保护，避免 400 错误）
+      const CODE_COLLAPSE_THRESHOLD = 15;
       const MAX_TOKENS_MIN = 1;
       const MAX_TOKENS_MAX = 393216;
-
-      // ★ 输入框超长文本阈值：超过后不再做逐字自适应高度调整，避免输入法卡顿
       const INPUT_AUTOSIZE_MAX_LEN = 4000;
+      const MIN_PAINT_GAP = 40;
+      // ★ 修复⑤：长文本时提高节流间隔，减少解析频率
+      const MIN_PAINT_GAP_LONG = 100;
+      const LONG_TEXT_THRESHOLD = 8000;
 
       /* ==================== 工具函数 ==================== */
       function genId() {
@@ -2588,11 +2616,6 @@
         return n.toLocaleString('en-US');
       }
 
-      /**
-       * 估算 token 数。
-       * ★ 修复：按码点（code point）遍历，避免代理对字符（如 emoji）被拆成两个
-       *   独立字符分别计数，导致估算偏差。
-       */
       function estimateTokens(text) {
         if (!text) return 0;
         const s = String(text);
@@ -2601,12 +2624,12 @@
         for (const ch of s) {
           const c = ch.codePointAt(0);
           if (
-            (c >= 0x4E00 && c <= 0x9FFF) ||   // CJK 统一表意文字
-            (c >= 0x3400 && c <= 0x4DBF) ||   // 扩展 A
-            (c >= 0x3040 && c <= 0x30FF) ||   // 日文假名
-            (c >= 0xAC00 && c <= 0xD7AF) ||   // 谚文
-            (c >= 0xF900 && c <= 0xFAFF) ||   // 兼容表意文字
-            (c >= 0x20000 && c <= 0x2FA1F)    // 扩展 B~F
+            (c >= 0x4E00 && c <= 0x9FFF) ||
+            (c >= 0x3400 && c <= 0x4DBF) ||
+            (c >= 0x3040 && c <= 0x30FF) ||
+            (c >= 0xAC00 && c <= 0xD7AF) ||
+            (c >= 0xF900 && c <= 0xFAFF) ||
+            (c >= 0x20000 && c <= 0x2FA1F)
           ) {
             cjk++;
           } else {
@@ -2632,10 +2655,6 @@
         return estimateTokens(node.reasoning);
       }
 
-      /**
-       * 将 max_tokens 钳制到有效范围 [1, 393216]。
-       * 返回 null 表示不发送该参数（值无效或留空）。
-       */
       function clampMaxTokens(v) {
         if (v === '' || v === null || v === undefined) return null;
         const n = Number(v);
@@ -2742,6 +2761,7 @@
       }
       state.providers = state.providers.map(p => ({
         ...p,
+        api_mode: p.api_mode === 'responses' ? 'responses' : 'chat',
         reasoning_effort: p.reasoning_effort || '',
       }));
 
@@ -2758,15 +2778,18 @@
         state.current_conv_id = null;
       }
 
-      let quotaWarned = false;
+      // ★ 修复③：改用时间节流而非一次性标志
+      let lastQuotaWarnAt = 0;
       function saveState() {
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+          lastQuotaWarnAt = 0; // 保存成功则重置计时
         } catch (e) {
           console.warn('保存状态失败:', e);
-          if (!quotaWarned) {
-            quotaWarned = true;
-            toast('本地存储空间不足，含图片的对话可能无法保存。', 'warn');
+          const now = Date.now();
+          if (now - lastQuotaWarnAt > 30000) {
+            lastQuotaWarnAt = now;
+            toast('本地存储空间不足，对话可能无法保存。建议删除旧对话或含图片的消息。', 'warn', 5000);
           }
         }
       }
@@ -2846,6 +2869,11 @@
         if (darkLink) darkLink.disabled = !dark;
         els.btnTheme.textContent = dark ? '☀️' : '🌙';
         els.btnTheme.title = dark ? '切换到白天模式' : '切换到黑夜模式';
+        // ★ 修复⑥：动态更新 theme-color，让移动端浏览器工具栏跟随主题
+        const themeColor = dark ? '#0b0d12' : '#ffffff';
+        document.querySelectorAll('meta[name="theme-color"]').forEach(m => {
+          m.content = themeColor;
+        });
       }
 
       /* ==================== Markdown ==================== */
@@ -2860,8 +2888,80 @@
         return DOMPurify.sanitize(html, { ADD_ATTR: ['target', 'rel'] });
       }
 
+      /* ==================== 流式 markdown 渲染（含缓存优化） ====================
+       * 修复⑤：避免每次完整重解析 markdown。
+       *
+       * 策略：
+       *   1. 扫描 raw 中最后一个未闭合的 ``` 代码块
+       *   2. 无未闭合代码块 → 完整渲染（走 renderMarkdown）
+       *   3. 有未闭合代码块：
+       *      - 已闭合部分（含所有前置内容）→ 缓存，仅首次解析
+       *      - 未闭合部分 → 快速生成简单 <pre> 结构，每次仅做文本转义
+       *   4. 长文本另在 schedule() 里加大节流间隔
+       * ============================================================ */
+      let _streamPrefixKey = '';
+      let _streamPrefixHTML = '';
+
+      // 返回最后一个未闭合代码块的行首位置；-1 表示没有未闭合代码块
+      function findUnclosedFenceStart(text) {
+        let fenceStart = -1;
+        let pos = 0;
+        const len = text.length;
+        while (pos < len) {
+          let lineEnd = text.indexOf('\n', pos);
+          if (lineEnd === -1) lineEnd = len;
+          const line = text.slice(pos, lineEnd);
+          if (line.trimStart().startsWith('```')) {
+            if (fenceStart === -1) {
+              fenceStart = pos;
+            } else {
+              fenceStart = -1;
+            }
+          }
+          if (lineEnd >= len) break;
+          pos = lineEnd + 1;
+        }
+        return fenceStart;
+      }
+
+      function renderStreamingMarkdown(raw) {
+        const fenceStart = findUnclosedFenceStart(raw);
+        if (fenceStart === -1) {
+          return renderMarkdown(raw);
+        }
+        const closedPart = raw.slice(0, fenceStart);
+        const openPart = raw.slice(fenceStart);
+
+        let closedHTML;
+        if (closedPart === _streamPrefixKey) {
+          closedHTML = _streamPrefixHTML;
+        } else {
+          closedHTML = renderMarkdown(closedPart);
+          _streamPrefixKey = closedPart;
+          _streamPrefixHTML = closedHTML;
+        }
+
+        const firstNL = openPart.indexOf('\n');
+        const fenceLine = firstNL === -1 ? openPart : openPart.slice(0, firstNL);
+        const lang = fenceLine.replace(/^\s*```/, '').trim().split(/\s+/)[0] || 'text';
+        const codeBody = firstNL === -1 ? '' : openPart.slice(firstNL + 1);
+        const trimmed = codeBody.replace(/\n+$/, '');
+        const lineCount = trimmed ? trimmed.split('\n').length : 0;
+
+        return closedHTML +
+          '<div class="code-block streaming">' +
+          '<div class="code-head">' +
+          '<span class="code-lang">' + escapeHtml(lang) + '</span>' +
+          '<span class="code-meta">' + (lineCount ? lineCount + ' 行' : '') + '</span>' +
+          '<button type="button" class="copy-btn">复制</button>' +
+          '</div>' +
+          '<pre><code>' + escapeHtml(codeBody) + '</code></pre>' +
+          '</div>';
+      }
+
+      /* ==================== 代码块处理（完成后/历史） ==================== */
       function postRender(container, opts = {}) {
-        const { highlight = true, allowCollapse = true } = opts;
+        const { highlight = true, streaming = false } = opts;
 
         container.querySelectorAll('a[href]').forEach(a => {
           const href = a.getAttribute('href') || '';
@@ -2879,6 +2979,40 @@
           const codeText = code.textContent || '';
           const trimmed = codeText.replace(/\n+$/, '');
           const lineCount = trimmed ? trimmed.split('\n').length : 0;
+
+          // 流式：轻量 header + 滚动 pre
+          if (streaming) {
+            const sWrap = document.createElement('div');
+            sWrap.className = 'code-block streaming';
+
+            const sHead = document.createElement('div');
+            sHead.className = 'code-head';
+
+            const sLang = document.createElement('span');
+            sLang.className = 'code-lang';
+            const lm = (code.className || '').match(/language-([^\s]+)/);
+            sLang.textContent = lm ? lm[1] : 'text';
+            sHead.appendChild(sLang);
+
+            const sMeta = document.createElement('span');
+            sMeta.className = 'code-meta';
+            sMeta.textContent = lineCount ? `${lineCount} 行` : '';
+            sHead.appendChild(sMeta);
+
+            const sCopy = document.createElement('button');
+            sCopy.type = 'button';
+            sCopy.className = 'copy-btn';
+            sCopy.textContent = '复制';
+            sHead.appendChild(sCopy);
+
+            sWrap.appendChild(sHead);
+            pre.parentNode.insertBefore(sWrap, pre);
+            sWrap.appendChild(pre);
+            return;
+          }
+
+          // 完成：完整结构
+          const isLong = lineCount >= CODE_COLLAPSE_THRESHOLD;
 
           const wrap = document.createElement('div');
           wrap.className = 'code-block';
@@ -2905,6 +3039,14 @@
           metaEl.textContent = lineCount ? `${lineCount} 行` : '';
           head.appendChild(metaEl);
 
+          let modeBtn = null;
+          if (isLong) {
+            modeBtn = document.createElement('button');
+            modeBtn.type = 'button';
+            modeBtn.className = 'code-mode-btn';
+            head.appendChild(modeBtn);
+          }
+
           const copyBtn = document.createElement('button');
           copyBtn.type = 'button';
           copyBtn.className = 'copy-btn';
@@ -2920,7 +3062,8 @@
           wrap.appendChild(pre);
           wrap.appendChild(hint);
 
-          if (allowCollapse && lineCount >= CODE_COLLAPSE_THRESHOLD) {
+          if (isLong) {
+            wrap.classList.add('mode-scroll');
             wrap.classList.add('collapsed');
           }
 
@@ -2940,21 +3083,45 @@
             }
           }
 
-          const updateAria = () => {
-            toggleBtn.setAttribute('aria-expanded',
-              String(!wrap.classList.contains('collapsed')));
+          const updateHeaderState = () => {
+            const isCollapsed = wrap.classList.contains('collapsed');
+            toggleBtn.setAttribute('aria-expanded', String(!isCollapsed));
+            if (modeBtn) {
+              modeBtn.style.display = isCollapsed ? 'none' : '';
+              if (!isCollapsed) {
+                const isFull = wrap.classList.contains('mode-full');
+                modeBtn.textContent = isFull ? '滚动查看' : '全部展开';
+                modeBtn.title = isFull ? '切换为固定高度滚动' : '展开全部内容';
+              }
+            }
           };
-          const toggle = () => {
+
+          const toggleCollapse = () => {
             wrap.classList.toggle('collapsed');
-            updateAria();
+            updateHeaderState();
           };
-          updateAria();
 
           toggleBtn.addEventListener('click', e => {
             e.stopPropagation();
-            toggle();
+            toggleCollapse();
           });
-          hint.addEventListener('click', toggle);
+          hint.addEventListener('click', toggleCollapse);
+
+          if (modeBtn) {
+            modeBtn.addEventListener('click', e => {
+              e.stopPropagation();
+              if (wrap.classList.contains('mode-full')) {
+                wrap.classList.remove('mode-full');
+                wrap.classList.add('mode-scroll');
+              } else {
+                wrap.classList.remove('mode-scroll');
+                wrap.classList.add('mode-full');
+              }
+              updateHeaderState();
+            });
+          }
+
+          updateHeaderState();
         });
       }
 
@@ -3242,7 +3409,7 @@
         <div class="empty">
           <div class="big-icon">✦</div>
           <h2>开始新对话</h2>
-          <p>支持 OpenAI 兼容接口 · Markdown · 流式输出 · 图片 · 对话分支 · 思考模式 · 代码折叠</p>
+          <p>支持 OpenAI 兼容接口 · Markdown · 流式输出 · 图片 · 对话分支 · 思考模式 · 代码折叠/滚动</p>
           <div class="suggest-chips">
             <button class="suggest-chip" type="button">写一首关于秋天的诗</button>
             <button class="suggest-chip" type="button">用 Python 写一个快速排序</button>
@@ -3309,6 +3476,7 @@
         if (p) {
           els.headerModel.textContent = p.model || '未指定模型';
           let sub = p.name || '未命名服务商';
+          if (p.api_mode === 'responses') sub += ' · Responses';
           if (p.reasoning_effort) sub += ' · 思考:' + p.reasoning_effort;
           els.headerProvider.textContent = sub;
         } else {
@@ -3400,7 +3568,6 @@
       }
 
       async function addImages(files) {
-        // ★ 修复：生成过程中不接受新图片，避免与 busy 状态下的发送流程冲突
         if (busy) {
           toast('正在生成回复，请稍后再添加图片', 'warn', 1800);
           return;
@@ -3474,12 +3641,92 @@
         return msgs;
       }
 
+      function toResponsesInput(apiMessages) {
+        let instructions = '';
+        const input = [];
+
+        for (const m of apiMessages) {
+          if (m.role === 'system') {
+            instructions = typeof m.content === 'string'
+              ? m.content
+              : (Array.isArray(m.content)
+                ? m.content.map(p => (p && typeof p.text === 'string') ? p.text : '').join('')
+                : '');
+            continue;
+          }
+          if (m.role === 'user') {
+            if (typeof m.content === 'string') {
+              if (m.content) input.push({ role: 'user', content: m.content });
+            } else if (Array.isArray(m.content)) {
+              const parts = [];
+              for (const part of m.content) {
+                if (!part) continue;
+                if (part.type === 'text' && typeof part.text === 'string') {
+                  parts.push({ type: 'input_text', text: part.text });
+                } else if (part.type === 'image_url' && part.image_url && part.image_url.url) {
+                  parts.push({ type: 'input_image', image_url: part.image_url.url });
+                }
+              }
+              if (parts.length) input.push({ role: 'user', content: parts });
+            }
+          } else if (m.role === 'assistant') {
+            const text = typeof m.content === 'string' ? m.content : '';
+            if (text) input.push({ role: 'assistant', content: text });
+          }
+        }
+        return { instructions, input };
+      }
+
+      function extractResponsesOutput(json) {
+        let content = '';
+        let reasoning = '';
+        let hasContent = false;
+
+        const out = Array.isArray(json.output) ? json.output : [];
+        for (const item of out) {
+          if (!item) continue;
+          if (item.type === 'message') {
+            const parts = Array.isArray(item.content) ? item.content : [];
+            for (const part of parts) {
+              if (!part) continue;
+              if (part.type === 'output_text' && typeof part.text === 'string') {
+                content += part.text;
+                hasContent = true;
+              } else if (part.type === 'refusal' && typeof part.refusal === 'string') {
+                content += part.refusal;
+                hasContent = true;
+              }
+            }
+          } else if (item.type === 'reasoning') {
+            const summaries = Array.isArray(item.summary) ? item.summary : [];
+            for (const s of summaries) {
+              if (s && s.type === 'summary_text' && typeof s.text === 'string') reasoning += s.text;
+            }
+            const contents = Array.isArray(item.content) ? item.content : [];
+            for (const c of contents) {
+              if (c && c.type === 'reasoning_text' && typeof c.text === 'string') reasoning += c.text;
+            }
+          }
+        }
+
+        if (!hasContent && typeof json.output_text === 'string') content = json.output_text;
+        return { content, reasoning };
+      }
+
       async function streamChat(apiMessages, signal, onDelta, onReasoning) {
         const p = provider();
         if (!p) throw new Error('未配置服务商');
         if (!p.base_url) throw new Error('请先在设置中填写 Base URL');
         if (!p.model) throw new Error('请先在设置中填写模型名称');
 
+        if (p.api_mode === 'responses') {
+          return streamResponses(apiMessages, signal, onDelta, onReasoning);
+        }
+        return streamChatCompletions(apiMessages, signal, onDelta, onReasoning);
+      }
+
+      async function streamChatCompletions(apiMessages, signal, onDelta, onReasoning) {
+        const p = provider();
         const url = p.base_url.replace(/\/+$/, '') + '/chat/completions';
         const headers = { 'Content-Type': 'application/json' };
         if (p.api_key) headers['Authorization'] = 'Bearer ' + p.api_key;
@@ -3488,7 +3735,6 @@
         const temp = Number(p.temperature);
         if (Number.isFinite(temp)) body.temperature = Math.min(Math.max(temp, 0), 2);
 
-        // ★ max_tokens 二次钳制：避免因超范围或非法值导致 HTTP 400
         const mt = clampMaxTokens(p.max_tokens);
         if (mt !== null) body.max_tokens = mt;
 
@@ -3515,7 +3761,6 @@
             }
           } catch (e) { /* 忽略 */ }
 
-          // ★ 针对 max_tokens 类错误给出更明确的提示
           if (/max_tokens/i.test(detail)) {
             throw new Error(
               `HTTP ${res.status} - 服务端拒绝 max_tokens（有效范围 ${MAX_TOKENS_MIN}~${MAX_TOKENS_MAX}）：${detail}\n` +
@@ -3538,7 +3783,6 @@
           } else if (typeof msg.reasoning === 'string' && msg.reasoning && onReasoning) {
             onReasoning(msg.reasoning);
           }
-          // ★ 修复：content 可能是字符串，也可能是内容块数组，统一成字符串回调
           let content = '';
           if (typeof msg.content === 'string') {
             content = msg.content;
@@ -3559,40 +3803,150 @@
         const decoder = new TextDecoder('utf-8');
         let buf = '';
 
+        const processData = data => {
+          if (!data || data === '[DONE]') return;
+          let j;
+          try { j = JSON.parse(data); } catch (e) { return; }
+          const choice = j && j.choices && j.choices[0];
+          if (!choice) return;
+          const d = choice.delta || choice.message || {};
+
+          const dr = typeof d.reasoning_content === 'string' && d.reasoning_content
+            ? d.reasoning_content
+            : (typeof d.reasoning === 'string' && d.reasoning ? d.reasoning : '');
+          if (dr && onReasoning) onReasoning(dr);
+
+          let dc = '';
+          if (typeof d.content === 'string') {
+            dc = d.content;
+          } else if (Array.isArray(d.content)) {
+            dc = d.content
+              .map(part => (part && typeof part.text === 'string') ? part.text : '')
+              .join('');
+          } else if (typeof choice.text === 'string') {
+            dc = choice.text;
+          }
+          if (dc && onDelta) onDelta(dc);
+        };
+
+        const processLine = line => {
+          const t = line.trim();
+          if (!t || t.startsWith(':')) return;
+          if (!t.startsWith('data:')) return;
+          processData(t.slice(5).trim());
+        };
+
         for (; ;) {
           const { done, value } = await reader.read();
           if (done) break;
           buf += decoder.decode(value, { stream: true });
-
           const lines = buf.split(/\r?\n/);
           buf = lines.pop() || '';
+          for (const line of lines) processLine(line);
+        }
+        if (buf.trim()) processLine(buf);
+      }
 
-          for (const line of lines) {
-            const t = line.trim();
-            if (!t || t.startsWith(':')) continue;
-            if (!t.startsWith('data:')) continue;
+      async function streamResponses(apiMessages, signal, onDelta, onReasoning) {
+        const p = provider();
+        const url = p.base_url.replace(/\/+$/, '') + '/responses';
+        const headers = { 'Content-Type': 'application/json' };
+        if (p.api_key) headers['Authorization'] = 'Bearer ' + p.api_key;
 
-            const data = t.slice(5).trim();
-            if (data === '[DONE]') return;
-            if (!data) continue;
+        const { instructions, input } = toResponsesInput(apiMessages);
+        if (!input.length) throw new Error('Responses 接口请求体为空：没有可发送的消息');
 
-            let j;
-            try { j = JSON.parse(data); } catch (e) { continue; }
+        const body = { model: p.model, input, stream: true };
+        if (instructions) body.instructions = instructions;
 
-            const choice = j && j.choices && j.choices[0];
-            if (!choice) continue;
+        const temp = Number(p.temperature);
+        if (Number.isFinite(temp)) body.temperature = Math.min(Math.max(temp, 0), 2);
 
-            const d = choice.delta || choice.message || {};
+        const mt = clampMaxTokens(p.max_tokens);
+        if (mt !== null) body.max_output_tokens = mt;
 
-            const dr = typeof d.reasoning_content === 'string' && d.reasoning_content
-              ? d.reasoning_content
-              : (typeof d.reasoning === 'string' && d.reasoning ? d.reasoning : '');
-            if (dr && onReasoning) onReasoning(dr);
+        if (p.reasoning_effort && ['low', 'medium', 'high'].includes(p.reasoning_effort)) {
+          body.reasoning = { effort: p.reasoning_effort };
+        }
 
-            const dc = typeof d.content === 'string' ? d.content
-              : (typeof choice.text === 'string' ? choice.text : '');
-            if (dc && onDelta) onDelta(dc);
+        const res = await fetch(url, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(body),
+          signal,
+        });
+
+        if (!res.ok) {
+          let detail = '';
+          try {
+            const txt = await res.text();
+            try {
+              const j = JSON.parse(txt);
+              detail = (j && j.error && j.error.message) || (j && j.message) || '';
+            } catch (e) {
+              detail = txt.slice(0, 200);
+            }
+          } catch (e) { /* 忽略 */ }
+          throw new Error(`HTTP ${res.status}${detail ? ' - ' + detail : ''}`);
+        }
+
+        const ct = (res.headers.get('content-type') || '').toLowerCase();
+
+        if (!ct.includes('event-stream') && !ct.includes('ndjson')) {
+          const txt = await res.text();
+          let json;
+          try { json = JSON.parse(txt); } catch (e) { throw new Error('响应不是有效的 JSON'); }
+          const { content, reasoning } = extractResponsesOutput(json);
+          if (reasoning && onReasoning) onReasoning(reasoning);
+          if (content && onDelta) onDelta(content);
+          return;
+        }
+
+        if (!res.body) throw new Error('当前浏览器不支持流式响应读取');
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buf = '';
+
+        const handleEvent = (type, j) => {
+          if (type === 'response.output_text.delta' || type === 'response.refusal.delta') {
+            const d = typeof j.delta === 'string' ? j.delta : '';
+            if (d && onDelta) onDelta(d);
+          } else if (type === 'response.reasoning_summary_text.delta' ||
+            type === 'response.reasoning_text.delta') {
+            const d = typeof j.delta === 'string' ? j.delta : '';
+            if (d && onReasoning) onReasoning(d);
+          } else if (type === 'response.failed' || type === 'error') {
+            const msg =
+              (j.response && j.response.error && j.response.error.message) ||
+              (j.error && j.error.message) || j.message || 'Responses API 返回错误';
+            throw new Error(msg);
           }
+        };
+
+        const processLine = line => {
+          const t = line.trim();
+          if (!t || t.startsWith(':')) return;
+          if (!t.startsWith('data:')) return;
+          const data = t.slice(5).trim();
+          if (!data || data === '[DONE]') return;
+          let j;
+          try { j = JSON.parse(data); } catch (e) { return; }
+          handleEvent(j.type || '', j);
+        };
+
+        try {
+          for (; ;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buf += decoder.decode(value, { stream: true });
+            const lines = buf.split(/\r?\n/);
+            buf = lines.pop() || '';
+            for (const line of lines) processLine(line);
+          }
+          if (buf.trim()) processLine(buf);
+        } finally {
+          try { reader.releaseLock(); } catch (e) { /* 忽略 */ }
         }
       }
 
@@ -3607,6 +3961,10 @@
 
       async function runCompletion(conv, fromNodeId) {
         setBusyUI(true);
+
+        // ★ 修复⑤：每条消息流式开始时重置缓存
+        _streamPrefixKey = '';
+        _streamPrefixHTML = '';
 
         const wrap = document.createElement('div');
         wrap.className = 'msg msg-assistant';
@@ -3641,8 +3999,6 @@
         const ensureThinkBlock = () => {
           if (thinkBlock) return;
           thinkBlock = document.createElement('div');
-          // ★ 修复：如果思考内容在块被创建之前就已经结束，则不要以展开状态创建，
-          //   否则会出现「思考已结束但块还开着」的错位状态。
           thinkBlock.className = 'think-block' + (reasoningFinished ? '' : ' open');
 
           const head = document.createElement('div');
@@ -3673,29 +4029,36 @@
 
         let raw = '';
         let reasoning = '';
-        let rafPending = false;
-        // ★ 流式结束后标记完成，阻止遗留的 requestAnimationFrame 再触发 paint()
+        // ★ 修复④：增量累加 token，避免每帧全量遍历
+        let reasoningTokensEstimated = 0;
+        let paintTimer = null;
+        let lastPaintAt = 0;
         let finished = false;
 
         const paint = () => {
-          // 一旦完成，忽略任何延迟触发的重绘
           if (finished) return;
 
           if (reasoning) {
             ensureThinkBlock();
+            // ★ 修复①：仅当用户接近底部时才自动滚动
+            const wasNearBottom =
+              thinkBodyEl.scrollHeight - thinkBodyEl.scrollTop - thinkBodyEl.clientHeight < 40;
             if (thinkBodyEl.textContent !== reasoning) {
               thinkBodyEl.textContent = reasoning;
+            }
+            if (wasNearBottom) {
               thinkBodyEl.scrollTop = thinkBodyEl.scrollHeight;
             }
-            const rT = estimateTokens(reasoning);
-            thinkMetaEl.textContent = fmtNum(rT) + ' tokens';
+            // ★ 修复④：直接用累加值，不再重新遍历 reasoning
+            thinkMetaEl.textContent = fmtNum(reasoningTokensEstimated) + ' tokens';
           }
 
           if (raw) {
             const md = document.createElement('div');
             md.className = 'md';
-            md.innerHTML = renderMarkdown(raw);
-            postRender(md, { highlight: false, allowCollapse: false });
+            // ★ 修复⑤：使用带缓存的流式渲染
+            md.innerHTML = renderStreamingMarkdown(raw);
+            postRender(md, { highlight: false, streaming: true });
             if (!reasoningFinished && reasoning) {
               // 思考中，正文不显示光标
             } else {
@@ -3704,6 +4067,12 @@
               md.appendChild(cur);
             }
             body.replaceChildren(md);
+
+            const streamPres = md.querySelectorAll('.code-block.streaming pre');
+            const lastPre = streamPres[streamPres.length - 1];
+            if (lastPre && lastPre.scrollHeight > lastPre.clientHeight) {
+              lastPre.scrollTop = lastPre.scrollHeight;
+            }
           } else if (!reasoning) {
             body.innerHTML = '<div class="typing"><i></i><i></i><i></i></div>';
           } else {
@@ -3713,25 +4082,35 @@
           if (stickToBottom) scrollToBottom();
         };
 
+        const doDelayedPaint = () => {
+          paintTimer = null;
+          if (finished) return;
+          lastPaintAt = performance.now();
+          paint();
+        };
+
         const schedule = () => {
-          if (rafPending || finished) return;
-          rafPending = true;
-          requestAnimationFrame(() => {
-            rafPending = false;
+          if (finished || paintTimer !== null) return;
+          const now = performance.now();
+          // ★ 修复⑤：长文本加大节流间隔，减少全量解析频率
+          const gap = raw.length > LONG_TEXT_THRESHOLD ? MIN_PAINT_GAP_LONG : MIN_PAINT_GAP;
+          const elapsed = now - lastPaintAt;
+          if (elapsed >= gap) {
+            lastPaintAt = now;
             paint();
-          });
+          } else {
+            paintTimer = setTimeout(doDelayedPaint, gap - elapsed);
+          }
         };
 
         const markReasoningDone = () => {
           if (reasoningFinished) return;
           reasoningFinished = true;
-          // 没有思考内容时，无需更新思考块 UI
           if (!reasoning) return;
-          const rT = estimateTokens(reasoning);
           if (thinkStatusEl) {
             thinkStatusEl.textContent = '思考过程';
           }
-          if (thinkMetaEl) thinkMetaEl.textContent = fmtNum(rT) + ' tokens';
+          if (thinkMetaEl) thinkMetaEl.textContent = fmtNum(reasoningTokensEstimated) + ' tokens';
           if (!userToggledThink && thinkBlock) thinkBlock.classList.remove('open');
         };
 
@@ -3750,6 +4129,8 @@
             },
             rdelta => {
               reasoning += rdelta;
+              // ★ 修复④：增量累加 reasoning token
+              reasoningTokensEstimated += estimateTokens(rdelta);
               schedule();
             }
           );
@@ -3764,8 +4145,18 @@
         } finally {
           abortController = null;
           setBusyUI(false);
-          // ★ 关键：在最终渲染前先阻止遗留的 paint() 再运行
           finished = true;
+          if (paintTimer !== null) {
+            clearTimeout(paintTimer);
+            paintTimer = null;
+          }
+        }
+
+        if (reasoning && !thinkBlock) {
+          ensureThinkBlock();
+        }
+        if (reasoning && thinkBodyEl && thinkBodyEl.textContent !== reasoning) {
+          thinkBodyEl.textContent = reasoning;
         }
 
         markReasoningDone();
@@ -3774,7 +4165,7 @@
           const md = document.createElement('div');
           md.className = 'md';
           md.innerHTML = renderMarkdown(raw);
-          postRender(md, { highlight: true, allowCollapse: true });
+          postRender(md, { highlight: true, streaming: false });
           body.replaceChildren(md);
 
           const aid = genId();
@@ -3789,7 +4180,7 @@
           };
           if (reasoning) {
             node.reasoning = reasoning;
-            node.reasoning_tokens = estimateTokens(reasoning);
+            node.reasoning_tokens = reasoningTokensEstimated;
           }
 
           conv.nodes[aid] = node;
@@ -3835,7 +4226,33 @@
           updateTokenStats();
           if (stickToBottom) scrollToBottom();
         } else if (errored) {
-          body.innerHTML = '<div class="msg-error">请求失败：' + escapeHtml(errorMsg) + '</div>';
+          // ★ 修复②：出错时若已有思考内容，仍保留思考节点
+          if (reasoning) {
+            const aid = genId();
+            const node = {
+              id: aid,
+              role: 'assistant',
+              content: '',
+              reasoning,
+              reasoning_tokens: reasoningTokensEstimated,
+              images: [],
+              parentId: fromNodeId,
+              createdAt: new Date().toISOString(),
+              tokens: 0,
+            };
+            conv.nodes[aid] = node;
+            conv.children[aid] = [];
+            if (!conv.children[fromNodeId]) conv.children[fromNodeId] = [];
+            conv.children[fromNodeId].push(aid);
+            conv.activeLeafId = aid;
+            wrap.dataset.nodeId = aid;
+            body.innerHTML = '<div class="msg-error">请求失败：' + escapeHtml(errorMsg) + '</div>';
+            saveState();
+            renderConvList();
+            updateTokenStats();
+          } else {
+            body.innerHTML = '<div class="msg-error">请求失败：' + escapeHtml(errorMsg) + '</div>';
+          }
           toast('请求失败：' + errorMsg.split('\n')[0], 'error', 4200);
         } else {
           if (reasoning) {
@@ -3845,7 +4262,7 @@
               role: 'assistant',
               content: '',
               reasoning,
-              reasoning_tokens: estimateTokens(reasoning),
+              reasoning_tokens: reasoningTokensEstimated,
               images: [],
               parentId: fromNodeId,
               createdAt: new Date().toISOString(),
@@ -3862,8 +4279,6 @@
             renderConvList();
             updateTokenStats();
           } else {
-            // ★ 修复：模型既没有返回正文、也没有返回思考内容时，给出明确提示，
-            //   而不是静默移除整条消息（用户会一头雾水）。
             wrap.dataset.nodeId = '';
             body.innerHTML = '<div class="msg-error">模型没有返回任何内容。请检查服务商配置，或稍后重试。</div>';
             toast('模型没有返回任何内容', 'warn', 3200);
@@ -3921,7 +4336,6 @@
         if (!node || node.role !== 'assistant') return;
 
         const parentId = node.parentId;
-        // ★ 修复：无法定位父级用户消息时给出反馈，而不是静默无响应
         if (!parentId || parentId === 'root') {
           toast('无法重新生成：找不到对应的用户消息', 'warn');
           return;
@@ -4114,7 +4528,7 @@
           const tempRaw = parseFloat(get('[name="temperature"]'));
           const mtRaw = parseInt(get('[name="max_tokens"]'), 10);
           const re = get('[name="reasoning_effort"]');
-          // ★ 保存时钳制 max_tokens 到 [1, 393216]
+          const mode = get('[name="api_mode"]');
           const mt = Number.isFinite(mtRaw) && mtRaw > 0
             ? Math.min(Math.max(mtRaw, MAX_TOKENS_MIN), MAX_TOKENS_MAX)
             : 2048;
@@ -4123,6 +4537,7 @@
             base_url: get('[name="base_url"]'),
             api_key: get('[name="api_key"]'),
             model: get('[name="model"]') || 'gpt-4o-mini',
+            api_mode: mode === 'responses' ? 'responses' : 'chat',
             temperature: Number.isFinite(tempRaw) ? Math.min(Math.max(tempRaw, 0), 2) : 0.7,
             max_tokens: mt,
             reasoning_effort: ['low', 'medium', 'high'].includes(re) ? re : '',
@@ -4192,11 +4607,14 @@
           grid.className = 'provider-grid';
           grid.appendChild(field('名称', 'name', 'text', '例如：OpenAI', p.name));
           grid.appendChild(field('模型', 'model', 'text', 'deepseek-flash', p.model));
+          grid.appendChild(selectField('接口类型', 'api_mode', p.api_mode === 'responses' ? 'responses' : 'chat', [
+            { value: 'chat', label: 'Chat Completions（/chat/completions）' },
+            { value: 'responses', label: 'Responses（/responses）' },
+          ], { full: true }));
           grid.appendChild(field('Base URL', 'base_url', 'text', 'https://api.openai.com/v1', p.base_url, { full: true }));
           grid.appendChild(field('API Key', 'api_key', 'password', '本地服务可留空', p.api_key, { full: true }));
           grid.appendChild(field('Temperature', 'temperature', 'number', '0.7',
             p.temperature === undefined ? 0.7 : p.temperature, { step: '0.1', min: '0', max: '2' }));
-          // ★ max_tokens 输入框带 min/max 与范围提示
           grid.appendChild(field(
             `Max Tokens（${MAX_TOKENS_MIN}~${MAX_TOKENS_MAX}）`,
             'max_tokens', 'number', '2048',
@@ -4259,17 +4677,7 @@
       function openSidebar() { document.body.classList.add('sidebar-open'); }
       function closeSidebar() { document.body.classList.remove('sidebar-open'); }
 
-      /* ==================== 输入框自适应高度（性能优化版） ====================
-       * 之前的实现方式在每次 input 事件里同步读取 scrollHeight，
-       * 当文本很长时（例如数万字符），每次按键都会触发强制重排（layout thrashing），
-       * 导致输入法组字、光标移动严重卡顿。
-       *
-       * 优化点：
-       *   1. 用 requestAnimationFrame 节流，一帧内只做一次
-       *   2. 输入法组字期间暂停调整
-       *   3. 超长文本切换为固定高度，不再逐字测量
-       *   4. 缓存上一次高度值，避免重复写入样式
-       * ================================================================ */
+      /* ==================== 输入框自适应高度 ==================== */
       let inputComposing = false;
       let inputRafId = null;
       let lastInputHeight = 0;
@@ -4285,7 +4693,6 @@
         const len = el.value.length;
         const maxH = window.innerWidth <= 640 ? 140 : 200;
 
-        // 超长文本：直接固定到上限高度，避免反复测量
         if (len > INPUT_AUTOSIZE_MAX_LEN) {
           if (lastInputHeight !== maxH) {
             lastInputHeight = maxH;
@@ -4294,7 +4701,6 @@
           return;
         }
 
-        // 先置为 auto 才能测得内容的自然高度
         el.style.height = 'auto';
         const next = Math.min(el.scrollHeight, maxH);
         lastInputHeight = next;
@@ -4387,19 +4793,12 @@
       });
 
       els.input.addEventListener('keydown', e => {
-        // ★ 修复：部分输入法在选词确认时会派发 keyCode 229 的 Enter 事件，
-        //   仅依赖 isComposing 会在个别浏览器/输入法下误触发送。
         if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
           e.preventDefault();
           sendMessage();
         }
       });
 
-      /* ★ 输入框性能优化：
-       *   - 输入法组字期间不调整高度（compositionstart / compositionend）
-       *   - input 事件用 requestAnimationFrame 节流
-       *   - 超长文本切固定高度
-       */
       els.input.addEventListener('compositionstart', () => { inputComposing = true; });
       els.input.addEventListener('compositionend', () => {
         inputComposing = false;
@@ -4518,7 +4917,6 @@
         if (window.innerWidth !== lastWidth) {
           lastWidth = window.innerWidth;
           if (window.innerWidth > 860) closeSidebar();
-          // 屏幕宽度变化后，输入框固定高度策略可能需要调整
           lastInputHeight = 0;
           scheduleInputResize();
         }
